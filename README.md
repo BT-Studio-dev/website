@@ -126,11 +126,43 @@ A full-screen modal with a live-filtering search over every section:
 | **BT Pro / Server Boost / Subscriptions / Gift Inventory / Billing** | Plan, boosts, invoices and gifts |
 | **Appearance** | Theme tiles (Light, Cyber Dusk, Midnight Aurora, **Deep Purple → Amber**, Custom Gradient, Aurora, Amethyst, Crimson Sunset, Forest, Mono), two-tone ambient gradient presets + custom picker, base mode, message density, accent + banner colour, **App Icons** grid with limited-time promos, the chat-display switch set (*Show images, videos, and lolcats*, *Show embeds and link previews*, *Show emoji reactions*, *Open threads in split view*, *Preview emoji, mentions, and markdown*, *Automatically convert emoticons to emoji*, *Show send message button*), DM search scope, and **Streamer Mode** with its sub-toggles |
 | **Voice & Video** | Input/output/camera pickers, input, output and **soundboard** volume sliders, **Mic Test** with an animated level meter (real `getUserMedia` + `AnalyserNode`, synthetic fallback when permission is denied), Input Profiles (Voice Isolation / Studio / Custom), **Noise Suppression (Krisp)**, Echo Cancellation, Automatic Gain, Push to Talk + shortcut, camera selector with **Test Video** preview, *Show Stream Previews*, call sounds with **Preview Sound** toggles (Deafen/Undeafen/Mute/Unmute/Camera), and Entrance Sound server selector + custom file |
-| **Accessibility** | Reduced motion, reduced saturation, font scaling |
+| **Accessibility** | Live preview card (sample messages, timestamps, reactions, interactive **Example Button**), text readability (12→24px chat size, underline links, display name styles), visual density (Compact/Default/Spacious UI density, Default/Compact chat display, 0→24px group spacing), colour & contrast (0→100% saturation, apply to custom colours, high contrast, sync contrast, role colours, official messages, on/off indicators), reduced motion (toggle, OS sync, 3→20s notification duration, GIF-on-focus, animated emoji, sticker animation policy), audio & screen reader (0.5→2.0x TTS with a real `speechSynthesis` preview, image descriptions, legacy chat input) |
+| **Keybinds** | Custom-keybinds banner linking the desktop app, full reference catalogue (General, Messages, Navigation, Drag & Drop, Chat, Voice and Video, Miscellaneous) with every documented combo, live search, and an **Active** / **Desktop only** chip per row — `Ctrl + /` opens a cheat sheet anywhere |
+| **Language & Time** | Ten-locale language dropdown driving `Intl` dates and numbers, Auto / 12-hour / 24-hour time format, and a live preview of message timestamps, the call timer and Member Since |
 | **Authorized Apps** | Connected apps and sessions |
 | **Edit Profiles** | Opens the full profile studio (below) |
 
 Every section persists to `profiles` (or `supabase.auth`) and updates live.
+Accessibility and Language & Time are written in two layers: a
+`localStorage` cache (`btcomms.accessibility.v1`, `btcomms.language.v1`) so the
+choice paints before the network responds, and
+`profiles.user_settings.accessibility` / `language` / `timeFormat` so a second
+device inherits it. `applyAppearance()` turns each preference into a CSS
+variable or `data-*` attribute on `<html>`, which is why ticking "Enable High
+Contrast Mode" repaints instantly.
+
+### Keyboard shortcuts
+
+`useGlobalKeybinds` installs a single document listener (never one per
+component) and consults `lib/keybinds.ts`, so the settings page and the runtime
+share one table:
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl + K` | QuickSwitcher (DM finder) |
+| `Ctrl + F` | Focus the open channel's search field |
+| `Ctrl + /` | Keyboard shortcut cheat sheet |
+| `Ctrl + Shift + N` | Create a server |
+| `Ctrl + Shift + T` | Create a private group |
+| `Ctrl + Shift + U` | Upload a file |
+| `Ctrl + Shift + L` | Copy channel link |
+| `Ctrl + Shift + M` / `D` | Toggle mute / deafen |
+| `Ctrl + Alt + ↑` / `Alt + ↑` | Previous server / next channel |
+| `Esc` | Focus the message composer (clears the autocomplete first) |
+
+Typing in a field is never hijacked: only actions flagged in `INPUT_SAFE`
+(pickers, upload, search, navigation) fire while a textarea has focus, and
+`⌘` is treated as `Ctrl` on macOS.
 
 ### Profile studio (`Edit Profiles`, or click any avatar)
 
