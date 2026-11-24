@@ -329,7 +329,21 @@ export const demoStore = {
     return server;
   },
 
-  updateProfile(patch: Partial<Pick<Profile, "display_name" | "bio" | "status">>) {
+  updateProfile(
+    patch: Partial<
+      Pick<
+        Profile,
+        | "display_name"
+        | "bio"
+        | "status"
+        | "custom_status"
+        | "custom_status_emoji"
+        | "accent_color"
+        | "banner_color"
+        | "avatar_url"
+      >
+    >,
+  ) {
     demoStore.profile = { ...demoStore.profile, ...patch };
     // keep membership rows in sync so the member list updates
     for (const list of Object.values(MEMBERS)) {
@@ -391,5 +405,145 @@ export const demoStore = {
   stopAmbient() {
     if (ambientTimer) clearInterval(ambientTimer);
     ambientTimer = null;
+  },
+};
+
+/* ------------------------------------------------------------------ */
+/* v2 demo: friends, DMs, activity                                     */
+/* ------------------------------------------------------------------ */
+
+export type DemoFriend = {
+  id: string;
+  profile: MessageAuthor & { status?: string | null; custom_status?: string | null };
+  request?: "incoming" | "outgoing" | null;
+};
+
+const FRIEND_PEOPLE = [
+  { ...PEOPLE[0], status: "online", custom_status: "Shipping the settings modal" },
+  { ...PEOPLE[1], status: "idle", custom_status: "Coffee break ☕" },
+  { ...PEOPLE[2], status: "online", custom_status: "Playing BT Comms Arena" },
+  { ...PEOPLE[3], status: "dnd", custom_status: "Deep work — do not disturb" },
+];
+
+export const demoFriends: DemoFriend[] = [
+  { id: "f1", profile: FRIEND_PEOPLE[0], request: null },
+  { id: "f2", profile: FRIEND_PEOPLE[1], request: null },
+  { id: "f3", profile: FRIEND_PEOPLE[2], request: null },
+  { id: "f4", profile: FRIEND_PEOPLE[3], request: null },
+  { id: "f5", profile: AUTHOR({ id: "demo-user-kai", username: "kai", display_name: "Kai Rivera", accent_color: "#22c55e" }), request: "incoming" },
+];
+
+export type DemoDm = {
+  id: string;
+  peer: MessageAuthor & { status?: string | null; custom_status?: string | null };
+  messages: { id: string; author_id: string; content: string; created_at: string }[];
+  unread: number;
+};
+
+const dmMin = (n: number) => new Date(Date.now() - n * 60_000).toISOString();
+
+export const demoDms: DemoDm[] = [
+  {
+    id: "demo-dm-sol",
+    peer: FRIEND_PEOPLE[0],
+    unread: 2,
+    messages: [
+      { id: "d1", author_id: PEOPLE[0].id, content: "hey! did the friends tab land on prod yet?", created_at: dmMin(120) },
+      { id: "d2", author_id: DEMO_USER_ID, content: "shipping it now — settings modal is the last piece 🎧", created_at: dmMin(95) },
+      { id: "d3", author_id: PEOPLE[0].id, content: "perfect. ping me when the deploy is green 👀", created_at: dmMin(12) },
+    ],
+  },
+  {
+    id: "demo-dm-mira",
+    peer: FRIEND_PEOPLE[1],
+    unread: 0,
+    messages: [
+      { id: "d4", author_id: PEOPLE[1].id, content: "the amethyst theme is *chef's kiss*", created_at: dmMin(300) },
+      { id: "d5", author_id: DEMO_USER_ID, content: "gradients everywhere 🎨", created_at: dmMin(280) },
+    ],
+  },
+  {
+    id: "demo-dm-dev",
+    peer: FRIEND_PEOPLE[2],
+    unread: 0,
+    messages: [
+      { id: "d6", author_id: PEOPLE[2].id, content: "DMs are realtime now — two tabs, instant.", created_at: dmMin(600) },
+    ],
+  },
+];
+
+export const demoActivities: Record<string, { kind: "game" | "music" | "code" | "voice"; title: string; detail?: string }> = {
+  [PEOPLE[0].id]: { kind: "code", title: "bt-comms/app", detail: "Editing components/settings" },
+  [PEOPLE[1].id]: { kind: "music", title: "Lo-fi Beats to Ship To", detail: "Spotify · playlist" },
+  [PEOPLE[2].id]: { kind: "game", title: "BT Comms Arena", detail: "Ranked · 3 of 5" },
+};
+
+let dmCounter = 500;
+
+export const demoSocial = {
+  addDmMessage(dmId: string, content: string) {
+    const dm = demoDms.find((d) => d.id === dmId);
+    if (!dm) return null;
+    const message = {
+      id: `demo-dm-${++dmCounter}`,
+      author_id: DEMO_USER_ID,
+      content,
+      created_at: new Date().toISOString(),
+    };
+    dm.messages.push(message);
+    notify();
+    return message;
+  },
+  deleteDmMessage(id: string) {
+    for (const dm of demoDms) dm.messages = dm.messages.filter((m) => m.id !== id);
+    notify();
+  },
+  ensureDm(peerId: string) {
+    const existing = demoDms.find((d) => d.peer.id === peerId);
+    if (existing) return existing.id;
+    const peer = FRIEND_PEOPLE.find((p) => p.id === peerId) ?? PEOPLE[0];
+    const dm: DemoDm = { id: `demo-dm-${++dmCounter}`, peer, unread: 0, messages: [] };
+    demoDms.unshift(dm);
+    notify();
+    return dm.id;
+  },
+  addFriend(username: string) {
+    const cleaned = username.trim().replace(/^@/, "").toLowerCase();
+    if (!cleaned) return { ok: false, message: "Enter a username first." };
+    if (FRIEND_PEOPLE.some((p) => p.username === cleaned)) {
+      return { ok: true, message: "You're already friends with that person." };
+    }
+    const found = demoFriends.find((f) => f.profile.username === cleaned);
+    if (found) {
+      found.request = "outgoing";
+      notify();
+      return { ok: true, message: "Friend request sent." };
+    }
+    // Accept anything else so the flow is always demoable.
+    const profile = AUTHOR({
+      id: `demo-user-${cleaned}`,
+      username: cleaned,
+      display_name: cleaned.charAt(0).toUpperCase() + cleaned.slice(1),
+      accent_color: "#00a8fc",
+    });
+    demoFriends.push({
+      id: `f-${cleaned}`,
+      profile: { ...profile, status: "online", custom_status: "Just joined BT Comms" },
+      request: "incoming",
+    });
+    notify();
+    return { ok: true, message: `Friend request sent to @${cleaned}.` };
+  },
+  respond(id: string, accept: boolean) {
+    const friend = demoFriends.find((f) => f.id === id);
+    if (!friend) return;
+    if (accept) friend.request = null;
+    else demoFriends.splice(demoFriends.indexOf(friend), 1);
+    notify();
+  },
+  remove(peerId: string) {
+    const index = demoFriends.findIndex((f) => f.profile.id === peerId);
+    if (index >= 0) demoFriends.splice(index, 1);
+    notify();
   },
 };

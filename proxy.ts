@@ -13,6 +13,7 @@ const AUTH_PAGES = ["/login", "/signup"];
  */
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
+
   const signedIn =
     hasSupabaseSession(request) ||
     // `?demo=1` lets reviewers open the workspace without an account.
@@ -24,6 +25,15 @@ export function proxy(request: NextRequest) {
     url.search = "";
     url.searchParams.set("next", path);
     return NextResponse.redirect(url);
+  }
+
+  // `/channels/@me` is the canonical Discord-style DM URL. Next treats a
+  // leading `@` folder as a parallel-route slot, so the files live under
+  // /channels/home and the friendly URL is rewritten onto them.
+  if (path === "/channels/@me" || path.startsWith("/channels/@me/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = path.replace("/channels/@me", "/channels/home");
+    return NextResponse.rewrite(url);
   }
 
   if (AUTH_PAGES.includes(path) && signedIn) {

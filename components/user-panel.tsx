@@ -1,32 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar } from "@/components/avatar";
+import { Avatar, presenceLabel } from "@/components/avatar";
 import {
   HeadphonesIcon,
   MicIcon,
   MicOffIcon,
   SettingsIcon,
-  LogoutIcon,
+  FriendsIcon,
 } from "@/components/icons";
 import type { Profile } from "@/lib/types";
 
 export function UserPanel({
   profile,
   onOpenSettings,
+  onOpenAddFriend,
+  pendingCount = 0,
 }: {
   profile: Profile;
   onOpenSettings: () => void;
+  /** Optional: when present, a friends shortcut is shown (Home view). */
+  onOpenAddFriend?: () => void;
+  pendingCount?: number;
 }) {
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
 
+  const statusText =
+    profile.custom_status ||
+    (profile.bio && profile.bio.trim()) ||
+    presenceLabel(profile.status);
+
   return (
-    <div className="flex items-center gap-1.5 border-t border-line/70 bg-abyss px-2 py-2">
+    <div className="flex shrink-0 items-center gap-1 border-t border-line/60 bg-abyss/90 px-2 py-1.5 backdrop-blur">
       <button
         onClick={onOpenSettings}
-        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1 text-left transition hover:bg-hover/60"
-        title="Edit profile"
+        className="group flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-hover/70"
+        title="User settings"
       >
         <Avatar
           name={profile.display_name}
@@ -40,10 +50,24 @@ export function UserPanel({
             {profile.display_name}
           </span>
           <span className="block truncate text-[11px] leading-tight text-dim">
-            @{profile.username}
+            {statusText}
           </span>
         </span>
       </button>
+
+      {onOpenAddFriend && (
+        <button
+          onClick={onOpenAddFriend}
+          title={pendingCount > 0 ? `${pendingCount} pending friend requests` : "Add a friend"}
+          aria-label="Add a friend"
+          className="relative grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition hover:bg-hover/70 hover:text-bright"
+        >
+          <FriendsIcon width={17} height={17} />
+          {pendingCount > 0 && (
+            <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-rose" />
+          )}
+        </button>
+      )}
 
       <div className="flex shrink-0 items-center">
         <IconToggle
@@ -60,25 +84,11 @@ export function UserPanel({
           label="Deafen"
           onClick={() => setDeafened((v) => !v)}
         >
-          <HeadphonesIcon
-            width={16}
-            height={16}
-            className={deafened ? "opacity-60" : undefined}
-          />
+          <HeadphonesIcon width={16} height={16} />
         </IconToggle>
-        <IconToggle label="User settings" onClick={onOpenSettings}>
+        <IconToggle label="User Settings" onClick={onOpenSettings}>
           <SettingsIcon width={16} height={16} />
         </IconToggle>
-        <form action="/auth/signout" method="post" className="contents">
-          <button
-            type="submit"
-            title="Log out"
-            aria-label="Log out"
-            className="grid h-8 w-8 place-items-center rounded-md text-muted transition hover:bg-rose/15 hover:text-rose"
-          >
-            <LogoutIcon width={16} height={16} />
-          </button>
-        </form>
       </div>
     </div>
   );
@@ -104,9 +114,7 @@ function IconToggle({
       aria-label={active ? (activeLabel ?? label) : label}
       aria-pressed={active}
       className={`grid h-8 w-8 place-items-center rounded-md transition ${
-        active
-          ? "bg-rose/15 text-rose"
-          : "text-muted hover:bg-hover/70 hover:text-bright"
+        active ? "bg-rose/15 text-rose" : "text-muted hover:bg-hover/70 hover:text-bright"
       }`}
     >
       {children}

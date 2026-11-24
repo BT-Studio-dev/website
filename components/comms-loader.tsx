@@ -32,9 +32,12 @@ type State =
 export function CommsLoader({
   serverId,
   channelId,
+  dmId,
 }: {
   serverId?: string;
   channelId?: string;
+  /** When present, /channels/@me/<dmId> opens that conversation directly. */
+  dmId?: string;
 }) {
   const supabase = useMemo<SupabaseClient>(() => createClient(), []);
   const router = useRouter();
@@ -99,15 +102,41 @@ export function CommsLoader({
       }
 
       const server =
-        servers.find((s) => s.id === serverId) ??
+        (serverId && serverId !== "@me"
+          ? servers.find((s) => s.id === serverId)
+          : undefined) ??
         servers.find((s) => s.is_default) ??
         servers[0];
+
+      const isHome = serverId === "@me";
+
+      if (isHome) {
+        // Home / DMs view — no server context required.
+        setState({
+          phase: "joined",
+          data: {
+            profile,
+            servers,
+            server: null,
+            channels: [],
+            members: [],
+            messages: [],
+            voiceStates: [],
+            viewerRole: "member",
+            email: session.user.email ?? "",
+            startView: "home",
+            startDmId: dmId ?? null,
+          },
+        });
+        return;
+      }
 
       const bundle = await fetchServerBundle(
         supabase,
         server,
         roles[server.id] ?? "member",
         channelId,
+        session.user.email ?? "",
       );
 
       if (!bundle) {
@@ -130,20 +159,22 @@ export function CommsLoader({
 
       setState({ phase: "joined", data: bundle });
     },
-    [supabase, router, serverId, channelId],
+    [supabase, router, serverId, channelId, dmId],
   );
 
   useEffect(() => {
-    const key = `${serverId ?? "root"}:${channelId ?? ""}`;
+    const key = `${serverId ?? "root"}:${channelId ?? ""}:${dmId ?? ""}`;
     if (loadedFor.current === key) return;
     loadedFor.current = key;
     setState({ phase: "loading" });
     void load();
-  }, [load, serverId, channelId]);
+  }, [load, serverId, channelId, dmId]);
 
   const refreshMembers = useCallback(async () => {
     if (state.phase !== "joined") return;
-    const members = await fetchMembers(supabase, state.data.server.id);
+    const serverIdForMembers = state.data.server?.id;
+    if (!serverIdForMembers) return;
+    const members = await fetchMembers(supabase, serverIdForMembers);
     setState((prev) =>
       prev.phase === "joined" ? { ...prev, data: { ...prev.data, members } } : prev,
     );
@@ -201,7 +232,6 @@ export function CommsLoader({
   return (
     <>
       <CommsApp
-        key={state.data.server.id}
         initial={state.data}
         onMembersChanged={() => void refreshMembers()}
       />
