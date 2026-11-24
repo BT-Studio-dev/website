@@ -51,7 +51,6 @@ export function MessageFeed({
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const pinnedToBottom = useRef(true);
-  const channelRef = useRef(channel.id);
 
   const membersById = useMemo(() => {
     const map = new Map<
@@ -80,20 +79,20 @@ export function MessageFeed({
     );
   }, [messages, search]);
 
-  // Reset when switching channels (the parent remounts, but be defensive).
-  useEffect(() => {
-    if (channelRef.current !== channel.id) {
-      channelRef.current = channel.id;
-      setMessages(initialMessages);
-      setSearch(null);
-    }
-  }, [channel.id, initialMessages]);
-
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
     const node = scrollRef.current;
     if (!node) return;
     node.scrollTo({ top: node.scrollHeight, behavior });
   }, []);
+
+  // The parent owns the message list for the active channel. Sync whenever it
+  // hands us a new snapshot (channel switch) so history is never dropped.
+  useEffect(() => {
+    setMessages(initialMessages);
+    pinnedToBottom.current = true;
+    const raf = requestAnimationFrame(() => scrollToBottom());
+    return () => cancelAnimationFrame(raf);
+  }, [initialMessages, scrollToBottom]);
 
   useLayoutEffect(() => {
     scrollToBottom();
