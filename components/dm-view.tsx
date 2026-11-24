@@ -33,6 +33,9 @@ export function DmView({
   onInviteToGroup,
   onEditGroup,
   members,
+  onStartCall,
+  muted: conversationMuted,
+  onToggleMute,
 }: {
   channel: DmChannel;
   messages: DirectMessage[];
@@ -56,6 +59,11 @@ export function DmView({
   onInviteToGroup?: () => void;
   onEditGroup?: () => void;
   members?: MessageAuthor[];
+  /** Starts a voice call with the peer (or the group). */
+  onStartCall?: () => void;
+  /** Per-conversation mute; the header bell reflects and toggles it. */
+  muted?: boolean;
+  onToggleMute?: () => void;
 }) {
   const [search, setSearch] = useState<string | null>(null);
   const [composerNote, setComposerNote] = useState<string | null>(null);
@@ -117,7 +125,7 @@ export function DmView({
           }}
         >
         {/* header */}
-        <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2.5 overflow-hidden border-b px-4">
+        <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2 overflow-hidden border-b px-3 sm:gap-2.5 sm:px-4">
           <button
             type="button"
             onClick={() => peer?.id && onOpenProfile?.(peer.id)}
@@ -183,8 +191,10 @@ export function DmView({
               <SearchIcon width={17} height={17} />
             </button>
             <button
-              title="Start voice call"
-              aria-label="Start voice call"
+              type="button"
+              onClick={() => onStartCall?.()}
+              title={group ? "Start a group call" : "Start voice call"}
+              aria-label={group ? "Start a group call" : `Start voice call with ${peerName}`}
               className="grid h-8 w-8 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
             >
               <PhoneIcon width={16} height={16} />
@@ -390,9 +400,21 @@ export function DmView({
           leftSlot={
             <button
               type="button"
-              title="Notifications"
-              aria-label="Conversation notifications"
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-hover/60 hover:text-bright"
+              onClick={() => onToggleMute?.()}
+              aria-pressed={conversationMuted ?? false}
+              title={
+                conversationMuted
+                  ? "Conversation muted — click to unmute"
+                  : "Mute this conversation"
+              }
+              aria-label={
+                conversationMuted ? "Unmute this conversation" : "Mute this conversation"
+              }
+              className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition ${
+                conversationMuted
+                  ? "bg-rose/20 text-rose hover:bg-rose/30"
+                  : "text-muted hover:bg-hover/60 hover:text-bright"
+              }`}
             >
               <BellIcon width={15} height={15} />
             </button>

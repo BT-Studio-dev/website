@@ -104,14 +104,14 @@ export function FriendsView({
         `flex-wrap` + `min-w-0` everywhere means the tabs scroll inside their
         own box below `sm` and never widen the header into the chat pane.
       */}
-      <header className="glass-bar flex h-12 shrink-0 flex-nowrap items-center justify-between gap-2 overflow-hidden border-b px-3 sm:gap-3 sm:px-4">
-        <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <FriendsIcon width={20} height={20} className="hidden shrink-0 text-muted sm:block" />
+      <header className="glass-bar flex min-h-12 shrink-0 flex-wrap items-center gap-x-2 gap-y-1.5 border-b px-3 py-2 sm:h-12 sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-0">
+        <div className="flex min-w-0 shrink items-center gap-2">
+          <FriendsIcon width={20} height={20} className="shrink-0 text-muted" />
           <h2 className="truncate text-[15px] font-bold tracking-tight text-bright">Friends</h2>
           <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-line sm:block" />
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:justify-end">
           <nav
             role="tablist"
             aria-label="Friend filters"
@@ -131,7 +131,10 @@ export function FriendsView({
               >
                 {item.label}
                 {item.id === "pending" && pendingTotal > 0 && (
-                  <span className="ml-1.5 rounded-full bg-rose px-1.5 text-[10px] font-bold text-white">
+                  <span
+                    title={`${pendingTotal} pending friend request${pendingTotal === 1 ? "" : "s"}`}
+                    className="ml-1.5 inline-block rounded-full bg-rose px-1.5 py-px align-middle text-[10px] leading-tight font-bold text-white"
+                  >
                     {pendingTotal}
                   </span>
                 )}
@@ -151,7 +154,12 @@ export function FriendsView({
             </button>
           </nav>
 
-          <div className="flex w-[92px] shrink-0 items-center gap-1.5 rounded-md bg-void/60 px-2 py-1.5 ring-1 ring-line/70 focus-within:ring-blurple/50 sm:w-[140px] sm:px-2.5 lg:w-[200px]">
+          {/*
+            The search box keeps a real width at every breakpoint. A bare
+            `flex-none` with no width collapses it to the placeholder's
+            intrinsic size, which is what made this bar look broken.
+          */}
+          <div className="flex min-w-0 max-w-[220px] flex-1 items-center gap-1.5 rounded-md bg-void/60 px-2 py-1.5 ring-1 ring-line/70 focus-within:ring-blurple/50 sm:w-[132px] sm:max-w-none sm:flex-none sm:shrink-0 sm:px-2.5 md:w-[160px] lg:w-[200px]">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -256,19 +264,23 @@ export function FriendsView({
           <div className="space-y-6">
             <PendingGroup
               title={`Incoming — ${incoming.length}`}
-              empty="No incoming requests."
+              empty="No incoming requests. When someone adds you, it shows up here."
+              emptyAction={{ label: "Find people", onClick: () => setFilter("add") }}
               items={incoming.map((request) => ({
                 id: request.id,
                 profile: request.profile,
+                note: request.note ?? "Wants to be friends",
                 actions: (
                   <>
-                    <IconAction
-                      label="Accept"
+                    <button
+                      type="button"
                       onClick={() => void onRespond(request.id, true)}
-                      className="text-mint hover:bg-mint/15"
+                      title="Accept friend request"
+                      className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mint px-2.5 text-[12px] font-semibold text-white transition hover:brightness-110"
                     >
-                      <CheckIcon width={16} height={16} />
-                    </IconAction>
+                      <CheckIcon width={14} height={14} />
+                      <span className="hidden sm:inline">Accept</span>
+                    </button>
                     <IconAction
                       label="Ignore"
                       onClick={() => void onRespond(request.id, false)}
@@ -283,19 +295,22 @@ export function FriendsView({
             <PendingGroup
               title={`Sent — ${outgoing.length}`}
               empty="You haven't sent any requests."
+              emptyAction={{ label: "Find people", onClick: () => setFilter("add") }}
               items={outgoing.map((request) => ({
                 id: request.id,
                 profile: request.profile,
                 actions: (
                   <IconAction
-                    label="Cancel"
+                    label="Cancel request"
                     onClick={() => void onRespond(request.id, false)}
                     className="text-rose hover:bg-rose/15"
                   >
                     <XCircleIcon width={16} height={16} />
                   </IconAction>
                 ),
-                note: "Outgoing request",
+                note: request.note
+                  ? `You wrote: “${request.note}” · awaiting a reply`
+                  : "Outgoing request · awaiting a reply",
               }))}
             />
           </div>
@@ -408,10 +423,13 @@ export function FriendsView({
 function PendingGroup({
   title,
   empty,
+  emptyAction,
   items,
 }: {
   title: string;
   empty: string;
+  /** Rendered beside the empty message so the state is never a dead end. */
+  emptyAction?: { label: string; onClick: () => void };
   items: {
     id: string;
     profile: FriendRequest["profile"];
@@ -425,7 +443,18 @@ function PendingGroup({
         {title}
       </h3>
       {items.length === 0 ? (
-        <p className="text-[12.5px] text-dim">{empty}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[12.5px] text-dim">{empty}</p>
+          {emptyAction && (
+            <button
+              type="button"
+              onClick={emptyAction.onClick}
+              className="text-[12.5px] font-semibold text-mint transition hover:underline"
+            >
+              {emptyAction.label} →
+            </button>
+          )}
+        </div>
       ) : (
         <ul className="space-y-0.5">
           {items.map((item) => {
@@ -433,7 +462,7 @@ function PendingGroup({
             return (
               <li
                 key={item.id}
-                className="flex items-center gap-3 rounded-lg px-2.5 py-2 transition hover:bg-hover/40"
+                className="ui-density-row flex items-center gap-3 rounded-lg px-2.5 py-2 transition hover:bg-hover/40"
               >
                 <Avatar
                   name={name}

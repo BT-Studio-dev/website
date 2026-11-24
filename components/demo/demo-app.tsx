@@ -130,6 +130,10 @@ export function DemoApp({
   const [activeDmId, setActiveDmId] = useState<string | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [homeFilter, setHomeFilter] = useState("");
+  const [demoMuted, setDemoMuted] = useState<Record<string, boolean>>({});
+  const toggleDemoMute = useCallback((id: string) => {
+    setDemoMuted((prev) => ({ ...prev, [id]: !prev[id] }));
+  }, []);
   const [wizardStep, setWizardStep] = useState<1 | 2>(1);
   const [wizardTemplate, setWizardTemplate] = useState<ServerTemplate | null>(null);
   const [wizardIntent, setWizardIntent] = useState<ServerIntent>("friends");
@@ -533,6 +537,9 @@ export function DemoApp({
                     demoSocial.addDmMessage(activeDm.id, content);
                   }}
                   onDelete={(id) => demoSocial.deleteDmMessage(id)}
+                  onStartCall={() => flash("Calls need a signed-in account — try it in the app.")}
+                  muted={Boolean(demoMuted[activeDm.id])}
+                  onToggleMute={() => toggleDemoMute(activeDm.id)}
                 />
               )}
 
@@ -550,6 +557,9 @@ export function DemoApp({
                   messages={groupMessages}
                   profile={me}
                   onSend={(content) => demoStore.addGroupMessage(activeGroup.id, content)}
+                  onStartCall={() => flash("Calls need a signed-in account — try it in the app.")}
+                  muted={Boolean(demoMuted[activeGroup.id])}
+                  onToggleMute={() => toggleDemoMute(activeGroup.id)}
                   onDelete={(id) =>
                     demoStore.groupMessages = demoStore.groupMessages.filter((m) => m.id !== id)
                   }

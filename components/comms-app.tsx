@@ -256,6 +256,8 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const [deafened, setDeafened] = useState(false);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>(undefined);
   const [shortcutSheetOpen, setShortcutSheetOpen] = useState(false);
+  // Conversations the viewer muted; toggled from the DM composer's bell.
+  const [mutedConversations, setMutedConversations] = useState<Record<string, boolean>>({});
   const [categoryTarget, setCategoryTarget] = useState<string | null>(null);
 
   const canManage = initial.viewerRole === "owner" || initial.viewerRole === "admin";
@@ -943,6 +945,31 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     }
   }
 
+  /**
+   * Start a call from a DM header.
+   *
+   * There is no peer-to-peer signalling yet, so this routes to the first voice
+   * channel of the server you have open — the same place a real call would land
+   * — and says so rather than pretending a call was placed.
+   */
+  function startDmCall(label: string) {
+    const voice = channels.find((c) => c.kind === "voice");
+    if (voice && server) {
+      void joinVoice(voice.id);
+      flash(`No ringing yet — joining ${voice.name} so you and ${label} can talk.`);
+      return;
+    }
+    flash(`Direct calls need a server voice channel — open a server to call ${label}.`);
+  }
+
+  function toggleConversationMute(id: string, label: string) {
+    setMutedConversations((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      flash(next[id] ? `Muted ${label}` : `Unmuted ${label}`);
+      return next;
+    });
+  }
+
   async function sendDm(content: string, attachments: Attachment[] = []) {
     if (!activeDmId) return;
     if (!content.trim() && attachments.length === 0) return;
@@ -1442,8 +1469,12 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                   setActiveDmId(null);
                 }}
                 onRespond={async (id, accept) => {
-                  await respondToRequest(supabase, id, accept);
+                  const ok = await respondToRequest(supabase, id, accept);
                   await loadSocial();
+                  if (!ok) {
+                    flash("That request couldn't be updated — try again.");
+                    return;
+                  }
                   flash(accept ? "Friend added" : "Request removed");
                 }}
                 onRemove={async (userId) => {
@@ -1465,6 +1496,16 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               onDelete={(id) => void deleteDm(id)}
               onOpenProfile={(userId) => void openProfile(userId)}
               supabase={supabase}
+              onStartCall={() =>
+                startDmCall(activeDm?.peer?.display_name ?? activeDm?.peer?.username ?? "your friend")
+              }
+              muted={Boolean(mutedConversations[activeDm.id])}
+              onToggleMute={() =>
+                toggleConversationMute(
+                  activeDm.id,
+                  activeDm?.peer?.display_name ?? activeDm?.peer?.username ?? "conversation",
+                )
+              }
             />
           )}
 
@@ -1494,6 +1535,11 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               onInviteToGroup={() => setDialog("newmessage")}
               onEditGroup={() => setDialog("group-icon")}
               supabase={supabase}
+              onStartCall={() => startDmCall(activeGroup.name ?? "the group")}
+              muted={Boolean(mutedConversations[activeGroup.id])}
+              onToggleMute={() =>
+                toggleConversationMute(activeGroup.id, activeGroup.name ?? "group")
+              }
             />
           )}
 
@@ -1529,6 +1575,11 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 setFormError(null);
                 setDialog("channel");
               }}
+              // The Information group's `server-guide` row used to be a dead
+              // click. Point it at the server header instead of nothing.
+              onOpenGuide={() =>
+                flash("Server guide: check the header menu for invite, channels and settings.")
+              }
               onServerAction={(action) => {
                 switch (action) {
                   case "invite":

@@ -39,6 +39,7 @@ export function ChannelSidebar({
   onCopyInvite,
   onServerAction,
   onQuickCreate,
+  onOpenGuide,
   isNewServer,
   showAllChannels = true,
   hideMutedChannels = false,
@@ -75,6 +76,8 @@ export function ChannelSidebar({
   onServerAction?: (action: ServerMenuAction) => void;
   /** The `+` next to a category header, scoped to that category. */
   onQuickCreate?: (category: string, kind: "text" | "voice") => void;
+  /** Opens the server guide; falls back to a tooltip when not provided. */
+  onOpenGuide?: () => void;
   isNewServer?: boolean;
   showAllChannels?: boolean;
   hideMutedChannels?: boolean;
@@ -149,8 +152,13 @@ export function ChannelSidebar({
             active={false}
             icon={<BoostIcon width={15} height={15} />}
             name="server-guide"
-            onClick={() => undefined}
+            onClick={() => onOpenGuide?.()}
             readOnly
+            title={
+              onOpenGuide
+                ? "Open the server guide"
+                : "Server guide — tips for setting up your server"
+            }
           />
         </ChannelGroup>
 
@@ -325,6 +333,7 @@ function ChannelRow({
   onJoin,
   joinLabel,
   readOnly,
+  title,
 }: {
   icon: React.ReactNode;
   name: string;
@@ -334,6 +343,7 @@ function ChannelRow({
   onJoin?: () => void;
   joinLabel?: string;
   readOnly?: boolean;
+  title?: string;
 }) {
   return (
     <div
@@ -343,6 +353,7 @@ function ChannelRow({
     >
       <button
         onClick={onClick}
+        title={title}
         className="flex min-w-0 flex-1 items-center gap-1.5 px-1.5 py-1.5 text-left text-[13.5px]"
       >
         <span className="shrink-0 opacity-70">{icon}</span>

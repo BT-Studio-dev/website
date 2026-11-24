@@ -37,13 +37,25 @@ export async function fetchFriends(supabase: SupabaseClient): Promise<{
   outgoing: FriendRequest[];
   blocked: FriendEntry[];
 }> {
-  const { data, error } = await supabase
+  // `note` ships with migration 0010; ask for it, but fall back to a select
+  // without it so an un-migrated database never blanks the whole Friends tab.
+  const withNote = await supabase
     .from("friendships")
     .select(
-      `id, requester_id, addressee_id, status, created_at, responded_at,
+      `id, requester_id, addressee_id, status, note, created_at, responded_at,
        requester:profiles!friendships_requester_id_fkey(${AUTHOR_FIELDS}, status, custom_status, custom_status_emoji),
        addressee:profiles!friendships_addressee_id_fkey(${AUTHOR_FIELDS}, status, custom_status, custom_status_emoji)`,
     );
+
+  const { data, error } = withNote.error
+    ? await supabase
+        .from("friendships")
+        .select(
+          `id, requester_id, addressee_id, status, created_at, responded_at,
+           requester:profiles!friendships_requester_id_fkey(${AUTHOR_FIELDS}, status, custom_status, custom_status_emoji),
+           addressee:profiles!friendships_addressee_id_fkey(${AUTHOR_FIELDS}, status, custom_status, custom_status_emoji)`,
+        )
+    : withNote;
 
   if (error || !data) return { friends: [], incoming: [], outgoing: [], blocked: [] };
 
@@ -72,10 +84,23 @@ export async function fetchFriends(supabase: SupabaseClient): Promise<{
     } else if (row.status === "blocked") {
       if (isRequester) blocked.push({ friendshipId: row.id, profile: other, since: row.created_at });
     } else if (row.status === "pending") {
+      const note = (row as { note?: string | null }).note ?? null;
       if (isRequester) {
-        outgoing.push({ id: row.id, direction: "outgoing", profile: other, created_at: row.created_at });
+        outgoing.push({
+          id: row.id,
+          direction: "outgoing",
+          profile: other,
+          created_at: row.created_at,
+          note,
+        });
       } else {
-        incoming.push({ id: row.id, direction: "incoming", profile: other, created_at: row.created_at });
+        incoming.push({
+          id: row.id,
+          direction: "incoming",
+          profile: other,
+          created_at: row.created_at,
+          note,
+        });
       }
     }
   }
@@ -95,6 +120,8 @@ export async function sendFriendRequest(
 
   const { data, error } = await supabase.rpc("send_friend_request", {
     p_username: cleaned,
+    // Carried on the friendship row so the recipient sees why you added them.
+    p_note: trimmedNote,
   });
 
   if (error) {
@@ -144,15 +171,18 @@ export async function respondToRequest(
     p_accept: accept,
   });
   if (error) {
+    // Fallback for a database without the updated function: accept the row you
+    // received, or delete either direction (a requester cancelling their own
+    // outgoing request is a delete too — the old RPC silently no-opped there).
     if (accept) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("friendships")
         .update({ status: "accepted", responded_at: new Date().toISOString() })
         .eq("id", id);
-    } else {
-      await supabase.from("friendships").delete().eq("id", id);
+      return !updateError;
     }
-    return true;
+    const { error: deleteError } = await supabase.from("friendships").delete().eq("id", id);
+    return !deleteError;
   }
   return Boolean((data as { ok?: boolean })?.ok);
 }

@@ -62,7 +62,7 @@ export function StatusPicker({
               onClick={() =>
                 option.timed
                   ? setDurationFor((v) => (v === option.id ? null : option.id))
-                  : (onPick("online", "forever"), setOpen(false))
+                  : (onPick(option.id, "forever"), setOpen(false))
               }
               className="flex w-full items-center gap-2 px-2.5 py-[7px] text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
             >

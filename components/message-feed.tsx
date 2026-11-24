@@ -345,7 +345,7 @@ export function MessageFeed({
         }}
       >
       {/* Channel header */}
-      <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2 overflow-hidden border-b px-4">
+      <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2 overflow-hidden border-b px-3 sm:px-4">
         <HashIcon width={18} height={18} className="shrink-0 text-muted" />
         <h2 className="truncate text-[14.5px] font-semibold tracking-tight text-bright">
           {channel.name}
@@ -360,8 +360,12 @@ export function MessageFeed({
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          {/*
+            The pill is the first thing to go when the header gets tight; the
+            title and actions matter more than the connection indicator.
+          */}
           <span
-            className="mr-1 flex items-center gap-1.5 rounded-full border border-line bg-void/50 px-2 py-1 text-[10px] font-medium tracking-wide text-dim"
+            className="mr-1 hidden items-center gap-1.5 rounded-full border border-line bg-void/50 px-2 py-1 text-[10px] font-medium tracking-wide text-dim sm:flex"
             title={live ? "Realtime connected" : "Connecting to realtime…"}
           >
             <span

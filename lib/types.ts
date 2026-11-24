@@ -286,6 +286,8 @@ export type FriendRequest = {
   direction: "incoming" | "outgoing";
   profile: MessageAuthor;
   created_at: string;
+  /** Optional personal note the requester attached (max 120 chars). */
+  note?: string | null;
 };
 
 export type ActiveActivity = {
