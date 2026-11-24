@@ -15,10 +15,33 @@ and voice channels — without the weight of a full enterprise chat product.
 **Marketing site (`/`)** — hero, product mock, feature grid, and CTA. The CTA
 adapts to whether you already have a session.
 
-**Themes** — a 2026 ambient system: three drifting light pools (default **deep
-purple → warm amber**) behind translucent glass sidebars, headers and input
-bars. Ten presets plus a **Custom Gradient** two-tone picker, all applied as CSS
-custom properties on `<html>` so nothing re-renders.
+**Themes** — a 2026 ambient system: three drifting light pools (default **Deep
+Purple → Amber**) behind translucent glass sidebars, headers and input bars.
+Ten presets — *Light, Cyber Dusk, Midnight Aurora, Deep Purple → Amber, Custom
+Gradient, Aurora Teal, Amethyst Twilight, Crimson Sunset, Forest Night, Carbon
+Mono* — plus a **Custom Gradient** two-tone picker.
+
+Every theme is a set of **semantic surface tokens** on `<html>`:
+
+| token | used for |
+| --- | --- |
+| `--bg-app-gradient` | the full-shell wash painted behind every pane |
+| `--bg-sidebar` | server rail, sidebars, member list |
+| `--bg-surface` | main chat / content pane |
+| `--bg-elevated` | cards, modals, popovers, menus |
+| `--bg-input` | inputs, composers, wells |
+| `--border-subtle` | the one border colour everywhere |
+| `--text-primary` / `--text-muted` | copy |
+
+Selecting a theme only rewrites those variables, so the rail, both sidebars,
+the chat pane, the member list, the DM profile card and the user control bar
+re-tint at once. Ambient themes additionally raise `--glass-sidebar` /
+`--glass-bar` so the gradient bleeds through the frosted panels.
+
+The choice is stored twice: `localStorage` (`btcomms.appearance.v1`, replayed by
+an inline script in `<head>` **before first paint**, so there is no flash) and
+`profiles.appearance` (the full blob: gradient ends, icon pack, streamer flags,
+density, motion, font scale).
 
 **Auth (`/login`, `/signup`)** — email + password via Supabase Auth. Signup
 collects a unique `@username`, a display name, and an accent colour that
@@ -79,7 +102,7 @@ A full-screen modal with a live-filtering search over every section:
 | **Messaging Permissions** | Who can DM you, message filter level, friend-request notifications |
 | **Notifications** | DMs, server messages, friend requests |
 | **BT Pro / Server Boost / Subscriptions / Gift Inventory / Billing** | Plan, boosts, invoices and gifts |
-| **Appearance** | Theme tiles (Light, Dark Charcoal, Midnight, **Amber Dusk**, Custom Gradient, Aurora, Amethyst, Ember, Forest, Mono), two-tone ambient gradient presets + custom picker, base mode, message density, accent + banner colour, **App Icons** grid with limited-time promos, the chat-display switch set (*Show images, videos, and lolcats*, *Show embeds and link previews*, *Show emoji reactions*, *Open threads in split view*, *Preview emoji, mentions, and markdown*, *Automatically convert emoticons to emoji*, *Show send message button*), DM search scope, and **Streamer Mode** with its sub-toggles |
+| **Appearance** | Theme tiles (Light, Cyber Dusk, Midnight Aurora, **Deep Purple → Amber**, Custom Gradient, Aurora, Amethyst, Crimson Sunset, Forest, Mono), two-tone ambient gradient presets + custom picker, base mode, message density, accent + banner colour, **App Icons** grid with limited-time promos, the chat-display switch set (*Show images, videos, and lolcats*, *Show embeds and link previews*, *Show emoji reactions*, *Open threads in split view*, *Preview emoji, mentions, and markdown*, *Automatically convert emoticons to emoji*, *Show send message button*), DM search scope, and **Streamer Mode** with its sub-toggles |
 | **Voice & Video** | Input/output/camera pickers, input, output and **soundboard** volume sliders, **Mic Test** with an animated level meter (real `getUserMedia` + `AnalyserNode`, synthetic fallback when permission is denied), Input Profiles (Voice Isolation / Studio / Custom), **Noise Suppression (Krisp)**, Echo Cancellation, Automatic Gain, Push to Talk + shortcut, camera selector with **Test Video** preview, *Show Stream Previews*, call sounds with **Preview Sound** toggles (Deafen/Undeafen/Mute/Unmute/Camera), and Entrance Sound server selector + custom file |
 | **Accessibility** | Reduced motion, reduced saturation, font scaling |
 | **Authorized Apps** | Connected apps and sessions |
@@ -155,7 +178,8 @@ handles the OAuth/email-confirmation callback.
 profiles        id (auth.users) · username (unique) · display_name · avatar_url
                 accent_color · status · bio · custom_status · custom_status_emoji
                 banner_color · theme_id · message_density · reduce_motion
-                reduced_saturation · font_scale · dm_privacy · message_filter
+                reduced_saturation · font_scale · appearance (JSONB)
+                dm_privacy · message_filter
                 notify_* · display_email · timestamps
 servers         id · name · icon · description · invite_code (unique) · owner_id · is_default
 channels        id · server_id → servers · name · kind (text|voice) · topic · position
@@ -184,7 +208,13 @@ row. Group messages are capped at 10 members by a trigger on
 Profile-card columns on `profiles`: `banner_url`, `theme_primary`,
 `theme_secondary`, `avatar_decoration`, `profile_effect`, `name_style`,
 `nameplate`, `pronouns`, `server_tag`, `connections` (JSONB), `widgets` (JSONB),
-`user_settings` (JSONB), `bt_pro`.
+`user_settings` (JSONB), `appearance` (JSONB), `bt_pro`.
+
+`profiles.appearance` holds the full theme object
+(`theme_id`, `gradient_from`/`gradient_to`, `message_density`, `reduce_motion`,
+`reduced_saturation`, `font_scale`, `icon_pack`, streamer flags). It mirrors the
+`localStorage` cache key `btcomms.appearance.v1` so the pre-paint script and the
+database never disagree.
 
 RPCs (all `security definer`): `redeem_server_invite`, `create_server_invite`,
 `ensure_dm_channel`, `send_friend_request`,
@@ -208,7 +238,9 @@ Every table has **row-level security** enabled:
 - Friendships and DM channels are visible only to the two people involved; DMs
   are readable/sendable only by participants, and only the author can edit or
   delete one.
-- Only owners/admins can create channels.
+- Only owners/admins can create channels. Owners can always read back the
+  `servers` / `channels` rows they just inserted, which is what makes
+  `insert(...).select()` work during server creation (migration `0006`).
 
 A `handle_new_user()` trigger on `auth.users` creates the profile, guarantees a
 unique username, and auto-joins the new member to the seeded **BT Comms**
@@ -283,7 +315,7 @@ modal (Appearance + Edit Profiles are fully live against local state).
 Run the demo-store logic tests:
 
 ```bash
-node --experimental-strip-types lib/demo.test.mjs   # 76 checks
+node --experimental-strip-types lib/demo.test.mjs   # 89 checks
 ```
 
 ---
@@ -325,6 +357,7 @@ components/
 lib/
   supabase/                    browser + server clients
   appearance.tsx               appearance context (applies CSS variables)
+  theme-boot.ts                storage key + pre-paint theme replay script
   themes.ts                    theme data + ambient gradient palettes
   presence.ts                  timed status helpers
   groups.ts                    group DM data access
