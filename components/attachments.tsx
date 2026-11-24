@@ -17,10 +17,13 @@ import type { Attachment } from "@/lib/types";
 export function AttachmentGrid({
   attachments,
   maxWidth = 460,
+  spoilers = false,
 }: {
   attachments: Attachment[];
   /** Constrains the tile row so long images never widen the feed. */
   maxWidth?: number;
+  /** Blur every image until the viewer clicks it (Discord's SPOILER tag). */
+  spoilers?: boolean;
 }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
 
@@ -34,6 +37,7 @@ export function AttachmentGrid({
             key={`${attachment.url}-${index}`}
             attachment={attachment}
             sole={attachments.length === 1}
+            spoiler={spoilers}
             onOpen={() => setLightbox(index)}
           />
         ))}
@@ -55,14 +59,18 @@ export function AttachmentGrid({
 function AttachmentTile({
   attachment,
   sole,
+  spoiler,
   onOpen,
 }: {
   attachment: Attachment;
   sole: boolean;
+  spoiler: boolean;
   onOpen: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  // A spoiler starts covered and is only revealed by an explicit click.
+  const [revealed, setRevealed] = useState(!spoiler);
   const image = isImageAttachment(attachment);
   const video = isVideoAttachment(attachment);
 
@@ -72,8 +80,8 @@ function AttachmentTile({
     return (
       <button
         type="button"
-        onClick={onOpen}
-        aria-label={`Open ${attachment.name}`}
+        onClick={() => (revealed ? onOpen() : setRevealed(true))}
+        aria-label={revealed ? `Open ${attachment.name}` : `Reveal spoiler: ${attachment.name}`}
         className="group relative overflow-hidden rounded-lg border border-subtle bg-input/60 transition hover:brightness-110"
         style={{ width, maxWidth: "100%", height }}
       >
@@ -96,9 +104,9 @@ function AttachmentTile({
             decoding="async"
             onLoad={() => setLoaded(true)}
             onError={() => setFailed(true)}
-            className={`h-full w-full object-cover transition-opacity duration-200 ${
+            className={`h-full w-full object-cover transition duration-200 ${
               loaded ? "opacity-100" : "opacity-0"
-            }`}
+            } ${revealed ? "" : "scale-110 blur-xl"}`}
           />
         ) : (
           <video
@@ -110,6 +118,13 @@ function AttachmentTile({
               loaded ? "opacity-100" : "opacity-0"
             }`}
           />
+        )}
+        {!revealed && (
+          <span className="absolute inset-0 grid place-items-center bg-black/35">
+            <span className="rounded-full bg-black/70 px-2.5 py-1 text-[10.5px] font-bold tracking-wide text-white uppercase">
+              Spoiler · click to reveal
+            </span>
+          </span>
         )}
         <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-black/70 to-transparent px-2 py-1 text-[10.5px] font-medium text-white opacity-0 transition group-hover:opacity-100">
           <span className="truncate">{attachment.name}</span>

@@ -34,8 +34,10 @@ import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   formatFileSize,
   isImageAttachment,
+  isStoredAttachmentUrl,
   isVideoAttachment,
   previewUrl,
+  stripStrayUrls,
 } from "@/lib/attachments";
 import type { Attachment, MessageAuthor } from "@/lib/types";
 
@@ -202,7 +204,10 @@ export function ChatComposer({
   /* ------------------------------- sending ------------------------------ */
 
   function submit() {
-    let content = value.trim();
+    // Defence in depth: the textarea never receives a blob URL from us, but a
+    // clipboard or a third-party drag can still paste one in as *text*. Strip it
+    // so the feed renders the uploaded file, never "blob:https://…".
+    let content = stripStrayUrls(value);
     if (!content && pending.length === 0) return;
     if (content) {
       if (autoEmoticons) content = applyEmoticons(content);
@@ -255,9 +260,14 @@ export function ChatComposer({
       if (file) files.push(file);
     }
     if (files.length > 0) {
-      // Keep pasted text intact; only hijack the paste when it carries files.
+      // Files belong in the attachment tray. Preventing the default stops the
+      // browser from also inserting the file's blob: URL as text.
       event.preventDefault();
       void addFiles(files);
+    } else {
+      // A clipboard that only carries a blob:/data: URL is not a message.
+      const text = event.clipboardData.getData("text/plain") ?? "";
+      if (/^\s*(blob|data):/i.test(text)) event.preventDefault();
     }
   }
 
@@ -310,7 +320,11 @@ export function ChatComposer({
     <div ref={rootRef} className="relative min-w-0 shrink-0 px-3 pb-3 md:px-4 md:pb-4">
       {/* autocomplete above the pill */}
       {showAutocomplete && (
-        <div className="animate-rise scroll-auto absolute bottom-full left-3 z-40 mb-1 max-h-64 w-[min(420px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] p-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div
+          role="listbox"
+          aria-label={isSlash ? "Commands" : "Members"}
+          className="animate-rise scroll-auto absolute bottom-full left-3 right-3 z-40 mb-1 max-h-64 overflow-y-auto rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] p-1 shadow-2xl shadow-black/60 backdrop-blur-2xl sm:right-auto sm:w-[min(420px,100%)]"
+        >
           <p className="px-2 py-1 text-[10px] font-bold tracking-[0.14em] text-dim uppercase">
             {isSlash ? "Commands" : "Members"}
           </p>
@@ -451,7 +465,7 @@ export function ChatComposer({
             </p>
           )}
 
-          <div className="scroll-auto flex max-h-[152px] gap-2 overflow-x-auto overflow-y-hidden pb-0.5">
+          <div className="scroll-auto flex max-h-[168px] gap-2 overflow-x-auto overflow-y-hidden pb-0.5">
             {pending.map((attachment) => (
               <PendingCard
                 key={attachment.url}
@@ -463,7 +477,7 @@ export function ChatComposer({
             {Array.from({ length: uploading }).map((_, index) => (
               <div
                 key={`uploading-${index}`}
-                className="grid h-[104px] w-[152px] shrink-0 animate-pulse place-items-center rounded-lg border border-subtle bg-hover/40"
+                className="grid h-[120px] w-[164px] shrink-0 animate-pulse place-items-center rounded-lg border border-subtle bg-hover/40"
               >
                 <span className="text-[10.5px] font-medium text-dim">Uploading…</span>
               </div>
@@ -474,7 +488,7 @@ export function ChatComposer({
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 aria-label="Add more files"
-                className="grid h-[104px] w-[72px] shrink-0 place-items-center rounded-lg border border-dashed border-subtle text-dim transition hover:border-blurple/60 hover:text-bright"
+                className="grid h-[120px] w-[64px] shrink-0 place-items-center rounded-lg border border-dashed border-subtle text-dim transition hover:border-blurple/60 hover:text-bright"
               >
                 <PlusIcon width={18} height={18} />
               </button>
@@ -482,7 +496,8 @@ export function ChatComposer({
           </div>
 
           <p className="px-1 pt-1 text-[10px] text-dim">
-            {pending.length} of {MAX_ATTACHMENTS_PER_MESSAGE} files · click a thumbnail&apos;s trash icon to remove
+            {pending.length === 1 ? "1 file" : `${pending.length} of ${MAX_ATTACHMENTS_PER_MESSAGE} files`}{" "}
+            ready · they upload to the channel, never into the text box
           </p>
         </div>
       )}
@@ -530,6 +545,7 @@ export function ChatComposer({
             type="file"
             accept={ATTACHMENT_ACCEPT}
             multiple
+            data-composer-file="true"
             aria-label="Choose files to upload"
             className="hidden"
             onChange={(event) => {
@@ -541,6 +557,7 @@ export function ChatComposer({
 
         <textarea
           ref={textareaRef}
+          data-composer-input="true"
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
@@ -623,10 +640,24 @@ export function ChatComposer({
         </div>
       </div>
 
-      <p className="mt-1 truncate px-3 text-[10px] text-dim">
-        <span className="font-semibold">Enter</span> to send ·{" "}
-        <span className="font-semibold">Shift + Enter</span> new line ·{" "}
-        <span className="font-semibold">Paste</span> or drop images to attach
+      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 px-3 text-[10px] leading-snug text-dim">
+        <span>
+          <span className="font-semibold">Enter</span> to send
+        </span>
+        <span aria-hidden>·</span>
+        <span>
+          <span className="font-semibold">Shift + Enter</span> for a new line
+        </span>
+        <span aria-hidden>·</span>
+        <span>
+          <span className="font-semibold">@</span> mentions / commands
+        </span>
+        <span aria-hidden className="hidden sm:inline">
+          ·
+        </span>
+        <span className="hidden sm:inline">
+          <span className="font-semibold">Paste</span> or drop images to attach
+        </span>
       </p>
     </div>
   );
@@ -674,7 +705,7 @@ function PendingCard({
   const [broken, setBroken] = useState(false);
 
   return (
-    <div className="group relative h-[104px] w-[152px] shrink-0 overflow-hidden rounded-lg border border-subtle bg-input/60">
+    <div className="group relative h-[120px] w-[164px] shrink-0 overflow-hidden rounded-lg border border-subtle bg-input/60">
       {image && !broken ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -686,16 +717,19 @@ function PendingCard({
       ) : video && !broken ? (
         <video src={attachment.url} muted className="h-full w-full object-cover" />
       ) : (
-        <div className="grid h-full w-full place-items-center gap-1 px-2 text-center">
-          <FileIcon width={20} height={20} className="text-muted" />
+        <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 px-2 text-center">
+          <FileIcon width={22} height={22} className="text-muted" />
           <span className="line-clamp-2 text-[10px] leading-tight text-dim">{attachment.name}</span>
+          <span className="text-[9px] text-dim">{formatFileSize(attachment.size)}</span>
         </div>
       )}
 
-      <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-1 bg-gradient-to-t from-black/80 to-transparent px-1.5 py-1">
+      {/* Filename strip — the tray is the only place a file name is shown, so it
+          must be readable even on a bright thumbnail. */}
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-1 bg-gradient-to-t from-black/85 via-black/45 to-transparent px-1.5 py-1">
         <ImageIcon width={10} height={10} className="shrink-0 text-white/70" />
         <span className="truncate text-[9.5px] font-medium text-white/90">
-          {formatFileSize(attachment.size)}
+          {attachment.name}
         </span>
       </span>
 
@@ -703,8 +737,8 @@ function PendingCard({
         type="button"
         onClick={onRemove}
         aria-label={`Remove ${attachment.name}`}
-        title="Remove"
-        className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/70 text-white/90 opacity-0 transition group-hover:opacity-100 hover:bg-rose hover:text-white focus:opacity-100"
+        title={`Remove ${attachment.name}`}
+        className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/70 text-white/90 transition hover:bg-rose hover:text-white focus:opacity-100 focus-visible:ring-2 focus-visible:ring-white/70 sm:opacity-0 sm:group-hover:opacity-100"
       >
         <TrashIcon width={12} height={12} />
       </button>

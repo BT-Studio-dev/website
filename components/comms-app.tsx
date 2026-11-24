@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { useGlobalKeybinds } from "@/lib/use-keybinds";
+import { ShortcutSheet } from "@/components/shortcut-sheet";
 import { normalizeAttachments } from "@/lib/attachments";
 import { AppearanceProvider, useAppearance } from "@/lib/appearance";
 import { ServerRail } from "@/components/server-rail";
@@ -59,12 +61,14 @@ import {
   saveProfileCard,
   fetchProfileCard,
   updateProfile,
+  saveUserSettings,
   uploadAvatar,
   uploadBanner,
   type FriendEntry,
   type FriendRequest,
 } from "@/lib/social";
 import type {
+  Appearance,
   Attachment,
   Channel,
   DirectMessage,
@@ -77,6 +81,7 @@ import type {
   Server,
   ServerMember,
   StatusDuration,
+  UserSettings,
   VoiceSettings,
   VoiceState,
 } from "@/lib/types";
@@ -116,6 +121,9 @@ export function CommsApp({ initial, onMembersChanged }: { initial: CommsInitial;
           ? { reduced_saturation: initial.profile.reduced_saturation }
           : {}),
         ...(initial.profile.font_scale ? { font_scale: initial.profile.font_scale } : {}),
+        // Accessibility + language are mirrored in `profiles.user_settings`; they
+        // win over the localStorage cache so a second device picks them up.
+        ...accessibilityInitial(initial.profile.user_settings),
       }}
     >
       <CommsShell initial={initial} onMembersChanged={onMembersChanged} />
@@ -123,11 +131,56 @@ export function CommsApp({ initial, onMembersChanged }: { initial: CommsInitial;
   );
 }
 
+/**
+ * Map `profiles.user_settings.accessibility` (+ language / timeFormat) onto the
+ * flat Appearance keys the provider understands. Anything absent stays
+ * undefined so the local cache and the defaults still apply.
+ */
+function accessibilityInitial(settings: UserSettings | undefined): Partial<Appearance> {
+  const a11y = settings?.accessibility;
+  const out: Partial<Appearance> = {};
+  if (a11y) {
+    if (a11y.chatFontSize !== undefined) out.chat_font_size = a11y.chatFontSize;
+    if (a11y.underlineLinks !== undefined) out.underline_links = a11y.underlineLinks;
+    if (a11y.displayNameStyles !== undefined) out.display_name_styles = a11y.displayNameStyles;
+    if (a11y.uiDensity !== undefined) out.ui_density = a11y.uiDensity;
+    if (a11y.chatDisplay !== undefined) out.chat_display = a11y.chatDisplay;
+    if (a11y.groupSpacing !== undefined) out.message_group_spacing = a11y.groupSpacing;
+    if (a11y.saturation !== undefined) out.saturation = a11y.saturation;
+    if (a11y.saturationCustomColors !== undefined)
+      out.saturation_custom_colors = a11y.saturationCustomColors;
+    if (a11y.highContrast !== undefined) out.high_contrast = a11y.highContrast;
+    if (a11y.syncContrast !== undefined) out.sync_contrast = a11y.syncContrast;
+    if (a11y.roleColors !== undefined) out.role_colors = a11y.roleColors;
+    if (a11y.officialMessages !== undefined) out.official_messages = a11y.officialMessages;
+    if (a11y.showOnOff !== undefined) out.show_on_off = a11y.showOnOff;
+    if (a11y.reduceMotion !== undefined) out.reduce_motion = a11y.reduceMotion;
+    if (a11y.reduceMotionSystem !== undefined) out.reduce_motion_system = a11y.reduceMotionSystem;
+    if (a11y.notificationDuration !== undefined)
+      out.notification_duration = a11y.notificationDuration;
+    if (a11y.playGifsFocused !== undefined) out.play_gifs_focused = a11y.playGifsFocused;
+    if (a11y.playAnimatedEmoji !== undefined) out.play_animated_emoji = a11y.playAnimatedEmoji;
+    if (a11y.stickerAnimations !== undefined) out.sticker_animations = a11y.stickerAnimations;
+    if (a11y.ttsRate !== undefined) out.tts_rate = a11y.ttsRate;
+    if (a11y.showImageDescriptions !== undefined)
+      out.show_image_descriptions = a11y.showImageDescriptions;
+    if (a11y.legacyChatInput !== undefined) out.legacy_chat_input = a11y.legacyChatInput;
+  }
+  if (settings?.language) out.language = settings.language;
+  if (settings?.timeFormat) out.time_format = settings.timeFormat;
+  return out;
+}
+
 function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMembersChanged?: () => void }) {
   const supabase = useMemo<SupabaseClient>(() => createClient(), []);
   const router = useRouter();
   const { appearance } = useAppearance();
   const persistedAppearance = useRef<string>("");
+  // Mirror of the latest `profiles.user_settings`; the appearance debounce merges
+  // into it so saving a theme never wipes a Notifications toggle.
+  const settingsRef = useRef<Record<string, unknown>>(
+    (initial.profile.user_settings ?? {}) as Record<string, unknown>,
+  );
 
   const [profile, setProfile] = useState(initial.profile);
   const [members, setMembers] = useState(initial.members);
@@ -202,6 +255,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>(undefined);
+  const [shortcutSheetOpen, setShortcutSheetOpen] = useState(false);
   const [categoryTarget, setCategoryTarget] = useState<string | null>(null);
 
   const canManage = initial.viewerRole === "owner" || initial.viewerRole === "admin";
@@ -213,6 +267,124 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     setToast(message);
     setTimeout(() => setToast((current) => (current === message ? null : current)), 2600);
   }, []);
+
+  /* ---------------------------- global keybinds ---------------------------- */
+
+  // `flash` is defined above; the handlers below read live state through refs so
+  // the listener table never has to be rebuilt as conversations change.
+  const openSettingsSection = useCallback((section: SettingsSectionId) => {
+    setSettingsSection(section);
+    setSettingsOpen(true);
+  }, []);
+
+  const keybindState = useRef({
+    serverIds: [] as string[],
+    channelIds: [] as string[],
+    activeServerId: null as string | null,
+    activeChannelId: "",
+    home: false,
+  });
+  keybindState.current = {
+    serverIds: servers.map((s) => s.id),
+    channelIds: channels.filter((c) => c.kind === "text").map((c) => c.id),
+    activeServerId,
+    activeChannelId,
+    home: view === "home",
+  };
+
+  const keybindHandlers = useMemo<Record<string, () => void>>(
+    () => ({
+      quickswitcher: () => {
+        setNewDmSearch("");
+        setDialog("newdm");
+      },
+      search: () => {
+        // Focus the feed's own search field when a channel is open, else open
+        // the DM finder — the same field Discord's Ctrl+F lands in.
+        const field = document.querySelector<HTMLInputElement>("[data-feed-search]");
+        if (field) {
+          field.focus();
+          field.select();
+          return;
+        }
+        setNewDmSearch("");
+        setDialog("newdm");
+      },
+      "show-shortcuts": () => setShortcutSheetOpen((open) => !open),
+      // Escape parks focus in the composer — the keybind the settings page
+      // documents as "Focus text area".
+      "focus-textarea": () => {
+        const composer = document.querySelector<HTMLTextAreaElement>(
+          "[data-composer-input] textarea, textarea[data-composer-input]",
+        );
+        composer?.focus();
+      },
+      "create-server": () => {
+        setFormError(null);
+        setDialog("server");
+      },
+      "new-group": () => {
+        setNewDmSearch("");
+        setDialog("newmessage");
+      },
+      "toggle-pins": () => flash("Pinned messages are coming soon."),
+      "toggle-inbox": () => flash("The inbox is coming soon."),
+      "toggle-members": () => flash("Member list toggle is available from the channel header."),
+      "toggle-emoji": () => flash("Open the emoji picker from the composer."),
+      "toggle-gif": () => flash("Open the GIF picker from the composer."),
+      "toggle-sticker": () => flash("Open the sticker picker from the composer."),
+      "upload-file": () => {
+        const input = document.querySelector<HTMLInputElement>("[data-composer-file]");
+        input?.click();
+      },
+      "copy-channel-link": () => {
+        const state = keybindState.current;
+        const path = state.home
+          ? "/channels/@me"
+          : `/channels/${state.activeServerId}/${state.activeChannelId}`;
+        const url = `${window.location.origin}${path}`;
+        void navigator.clipboard?.writeText(url).catch(() => undefined);
+        flash("Channel link copied");
+      },
+      "toggle-mute": () => {
+        setMuted((prev) => {
+          if (prev) return false;
+          setDeafened(false);
+          return true;
+        });
+      },
+      "toggle-deafen": () => {
+        setDeafened((prev) => {
+          const next = !prev;
+          if (next) setMuted(true);
+          return next;
+        });
+      },
+      "start-call": () => flash("Start a call from a DM header."),
+      "get-help": () => openSettingsSection("keybinds"),
+      lofi: () => flash("🎧 Lo-fi beats are coming soon."),
+      "nav-servers": () => {
+        const { serverIds, activeServerId: current } = keybindState.current;
+        if (serverIds.length === 0) return;
+        const at = current ? serverIds.indexOf(current) : -1;
+        const next = at <= 0 ? serverIds[0] : serverIds[at - 1];
+        void openServer(next);
+      },
+      "nav-channels": () => {
+        const { channelIds, activeChannelId: current } = keybindState.current;
+        if (channelIds.length === 0) return;
+        const at = channelIds.indexOf(current);
+        const next = channelIds[(at + 1 + channelIds.length) % channelIds.length];
+        void loadChannel(next);
+      },
+    }),
+    // Handlers close over stable setters and the keybindState ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [flash, openSettingsSection],
+  );
+
+  useGlobalKeybinds(keybindHandlers, !shortcutSheetOpen);
+
 
   /* ------------------------- appearance persistence ------------------------ */
   // Skip the mount render (that value came from the server), then debounce
@@ -238,6 +410,38 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         // …and the full blob carries the gradient + icon pack + streamer flags
         // so switching devices doesn't reset them.
         appearance,
+      });
+
+      // Accessibility + language also live in `profiles.user_settings` so the
+      // User Settings panels (which read that JSONB) agree with the theme blob.
+      void saveUserSettings(supabase, profile.id, {
+        ...(settingsRef.current ?? {}),
+        accessibility: {
+          chatFontSize: appearance.chat_font_size,
+          underlineLinks: appearance.underline_links,
+          displayNameStyles: appearance.display_name_styles,
+          uiDensity: appearance.ui_density,
+          chatDisplay: appearance.chat_display,
+          groupSpacing: appearance.message_group_spacing,
+          saturation: appearance.saturation,
+          saturationCustomColors: appearance.saturation_custom_colors,
+          highContrast: appearance.high_contrast,
+          syncContrast: appearance.sync_contrast,
+          roleColors: appearance.role_colors,
+          officialMessages: appearance.official_messages,
+          showOnOff: appearance.show_on_off,
+          reduceMotion: appearance.reduce_motion,
+          reduceMotionSystem: appearance.reduce_motion_system,
+          notificationDuration: appearance.notification_duration,
+          playGifsFocused: appearance.play_gifs_focused,
+          playAnimatedEmoji: appearance.play_animated_emoji,
+          stickerAnimations: appearance.sticker_animations,
+          ttsRate: appearance.tts_rate,
+          showImageDescriptions: appearance.show_image_descriptions,
+          legacyChatInput: appearance.legacy_chat_input,
+        },
+        language: appearance.language,
+        timeFormat: appearance.time_format,
       });
     }, 600);
     return () => clearTimeout(timeout);
@@ -1491,6 +1695,12 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       )}
 
       {/* Settings */}
+      <ShortcutSheet
+        open={shortcutSheetOpen}
+        onClose={() => setShortcutSheetOpen(false)}
+        onOpenSettings={() => openSettingsSection("keybinds")}
+      />
+
       <SettingsModal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
@@ -1501,6 +1711,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         onProfileSaved={(next) => {
           setProfile(next);
           setStatus(next.status);
+          settingsRef.current = (next.user_settings ?? {}) as Record<string, unknown>;
         }}
         pendingRequests={pendingCount}
         initialSection={settingsSection}

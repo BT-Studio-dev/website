@@ -161,12 +161,66 @@ export function previewUrl(file: File): string {
   return URL.createObjectURL(file);
 }
 
+/** Extensions we always treat as inline images, even when the MIME is wrong. */
+const IMAGE_EXTENSIONS = /(png|jpe?g|gif|webp|avif|svg|bmp)$/i;
+const VIDEO_EXTENSIONS = /(mp4|webm|mov|m4v|ogv)$/i;
+
+/** `name` then URL path; the MIME type is the least reliable signal. */
+function extensionOf(attachment: Attachment): string {
+  const source = attachment.name || fileNameFromUrl(attachment.url || "");
+  return source.split("?")[0];
+}
+
+/**
+ * Is this something we can paint inline?
+ *
+ * Browsers disagree about the `type` reported for pasted/dragged files (a
+ * screenshot can arrive as `application/octet-stream` or an empty string), which
+ * used to fall through to a generic download chip. Trust the MIME when it is a
+ * real image type, otherwise fall back to the filename/URL extension.
+ */
 export function isImageAttachment(attachment: Attachment): boolean {
-  return attachment.type.startsWith("image/");
+  const type = (attachment.type ?? "").toLowerCase();
+  if (type.startsWith("image/")) return true;
+  // A definite MIME (anything but the generic octet-stream) is authoritative:
+  // a PDF named "doc.png" stays a PDF.
+  const generic = !type || type === "application/octet-stream" || type === "binary/octet-stream";
+  if (!generic) return false;
+  return IMAGE_EXTENSIONS.test(extensionOf(attachment));
 }
 
 export function isVideoAttachment(attachment: Attachment): boolean {
-  return attachment.type.startsWith("video/");
+  const type = (attachment.type ?? "").toLowerCase();
+  if (type.startsWith("video/")) return true;
+  if (type.startsWith("image/")) return false;
+  return VIDEO_EXTENSIONS.test(extensionOf(attachment));
+}
+
+/**
+ * True for the two URL shapes this app writes: a Supabase public URL or a local
+ * `blob:` preview. Anything else (a `data:` string pasted into the composer, for
+ * example) must never be treated as a stored attachment.
+ */
+export function isStoredAttachmentUrl(url: string): boolean {
+  if (typeof url !== "string" || !url) return false;
+  return url.startsWith("https://") || url.startsWith("http://") || url.startsWith("blob:");
+}
+
+/**
+ * Strip pasted blob/data URLs out of message text.
+ *
+ * The composer has always dropped pasted files into the attachment tray, but a
+ * clipboard can also carry the *text* of a `blob:` URL (dragging an image out of
+ * another tab does exactly this). That text used to be sent verbatim and
+ * rendered as a dead link, so it is removed before the message is stored.
+ */
+export function stripStrayUrls(content: string): string {
+  if (!content) return "";
+  return content
+    .replace(/\b(?:blob|data):[^\s<>"']+/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
 }
 
 /** Trim, drop empties, dedupe by URL. */

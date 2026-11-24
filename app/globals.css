@@ -423,6 +423,115 @@
     padding-top: 0.625rem;
     padding-bottom: 0.625rem;
   }
+
+  /* ------------------------------------------------------------------ */
+  /* User Settings → Accessibility                                       */
+  /*                                                                    */
+  /* Every knob writes a CSS variable or a data attribute on <html> via  */
+  /* applyAppearance(), so these rules are the only thing that has to    */
+  /* know how a preference becomes pixels.                              */
+  /* ------------------------------------------------------------------ */
+
+  /* Flush scrollbars: the feed's bar sits in the pane's own padding, so it
+     can never bleed under the profile panel next to it. */
+  .feed-scroll {
+    scrollbar-gutter: stable;
+    padding-inline-end: 0.5rem;
+    overscroll-behavior: contain;
+  }
+
+  /* Text size in chat (12px → 24px) and message grouping. */
+  .chat-text {
+    font-size: var(--chat-font-size, 16px);
+    line-height: 1.375;
+  }
+  .chat-text code,
+  .chat-text pre {
+    font-size: 0.88em;
+  }
+  .message-group {
+    margin-top: var(--message-group-gap, 12px);
+  }
+
+  /* Always underline links. */
+  [data-underline-links="true"] .chat-text a,
+  [data-underline-links="true"] .markdown-link {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Chat Message Display: compact collapses grouped rows. */
+  [data-chat-display="compact"] .density-row {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  [data-chat-display="compact"] .chat-avatar-gutter {
+    width: 0;
+  }
+
+  /* UI Density: rail + sidebar + panel padding. */
+  [data-ui-density="compact"] {
+    --ui-row-pad: 0.125rem;
+    --ui-section-pad: 0.375rem;
+  }
+  [data-ui-density="default"] {
+    --ui-row-pad: 0.25rem;
+    --ui-section-pad: 0.5rem;
+  }
+  [data-ui-density="spacious"] {
+    --ui-row-pad: 0.5rem;
+    --ui-section-pad: 0.75rem;
+  }
+  [data-ui-density] .ui-density-row {
+    padding-top: var(--ui-row-pad);
+    padding-bottom: var(--ui-row-pad);
+  }
+
+  /* Saturation slider (0–100%) + legacy binary toggle. */
+  [data-saturation="reduced"] body {
+    filter: saturate(0.55);
+  }
+  [data-saturation="custom"] body {
+    filter: saturate(var(--ui-saturation, 1));
+  }
+
+  /* High contrast: stronger borders and brighter muted copy. */
+  [data-high-contrast="true"] {
+    --border-subtle: color-mix(in oklab, var(--text-primary) 34%, transparent);
+    --text-muted: color-mix(in oklab, var(--text-primary) 88%, transparent);
+  }
+  [data-high-contrast="true"] .glass,
+  [data-high-contrast="true"] .glass-panel,
+  [data-high-contrast="true"] .composer-pill {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--bg-elevated);
+  }
+
+  /* Show on/off indicators beside audio-style toggles. */
+  [data-show-on-off="true"] [data-toggle-state]::after {
+    content: attr(data-toggle-state);
+    margin-inline-start: 0.5rem;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Reduced motion / sticker & emoji animation policy. */
+  [data-motion="reduced"] *,
+  [data-motion="reduced"] *::before,
+  [data-motion="reduced"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-stickers="never"] img[data-animated="true"],
+  [data-stickers="never"] video[data-sticker="true"],
+  [data-animated-emoji="false"] img[data-animated="true"] {
+    animation: none !important;
+  }
 }
 
 /* Reduced motion: honour both the OS setting and the in-app toggle */

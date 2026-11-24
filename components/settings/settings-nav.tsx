@@ -3,6 +3,8 @@
 import { Avatar } from "@/components/avatar";
 import {
   AccessibilityIcon,
+  KeybindIcon,
+  GlobeIcon,
   AppsIcon,
   BellIcon,
   BoostIcon,
@@ -39,6 +41,8 @@ export type SettingsSectionId =
   | "appearance"
   | "voice"
   | "accessibility"
+  | "keybinds"
+  | "language"
   | "apps";
 
 export type NavItem = {
@@ -129,6 +133,18 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
         label: "Accessibility",
         icon: <AccessibilityIcon width={16} height={16} />,
         keywords: ["accessibility", "motion", "contrast", "saturation", "font", "scale", "zoom"],
+      },
+      {
+        id: "keybinds",
+        label: "Keybinds",
+        icon: <KeybindIcon width={16} height={16} />,
+        keywords: ["keybinds", "keyboard", "shortcuts", "hotkeys", "system", "commands"],
+      },
+      {
+        id: "language",
+        label: "Language & Time",
+        icon: <GlobeIcon width={16} height={16} />,
+        keywords: ["language", "locale", "time", "clock", "24-hour", "12-hour", "region", "translation"],
       },
       {
         id: "voice",

@@ -143,6 +143,31 @@ export type Appearance = {
   reduce_motion: boolean;
   reduced_saturation: boolean;
   font_scale: number;
+  /* v6 — accessibility (see lib/accessibility.ts) */
+  chat_font_size?: number;
+  underline_links?: boolean;
+  display_name_styles?: boolean;
+  ui_density?: UiDensity;
+  chat_display?: ChatMessageDisplay;
+  message_group_spacing?: number;
+  saturation?: number;
+  saturation_custom_colors?: boolean;
+  high_contrast?: boolean;
+  sync_contrast?: boolean;
+  role_colors?: RoleColorMode;
+  official_messages?: OfficialMessageMode;
+  show_on_off?: boolean;
+  reduce_motion_system?: boolean;
+  notification_duration?: number;
+  play_gifs_focused?: boolean;
+  play_animated_emoji?: boolean;
+  sticker_animations?: StickerAnimation;
+  tts_rate?: number;
+  show_image_descriptions?: boolean;
+  legacy_chat_input?: boolean;
+  /* v6 — language & time */
+  language?: string;
+  time_format?: TimeFormat;
   /* v4 — custom gradient + icon pack + streamer mode */
   gradient_from?: string;
   gradient_to?: string;
@@ -155,6 +180,22 @@ export type Appearance = {
 };
 
 export type IconPackId = "classic" | "neo" | "soft" | "pixel" | "promo-summer" | "promo-space";
+
+/* v6 — Accessibility */
+
+/** Coarse UI density, distinct from the older per-row `message_density`. */
+export type UiDensity = "compact" | "default" | "spacious";
+
+/** Discord's "Chat Message Display" radio group. */
+export type ChatMessageDisplay = "default" | "compact";
+
+export type RoleColorMode = "names" | "dots" | "off";
+export type OfficialMessageMode = "text-color" | "no-text-color";
+export type StickerAnimation = "always" | "interaction" | "never";
+
+/* v6 — Language & time */
+
+export type TimeFormat = "auto" | "12h" | "24h";
 
 /** Chat-display preferences toggled in Appearance. */
 export type ChatDisplaySettings = {
@@ -396,7 +437,37 @@ export type UserSettings = {
   callSoundUnmute?: boolean;
   lastStatus?: Presence;
   lastStatusDuration?: StatusDuration;
+  /* v6 — Accessibility (mirrors lib/accessibility.ts) */
+  accessibility?: AccessibilitySettings;
+  /* v6 — Language & time */
+  language?: string;
+  timeFormat?: TimeFormat;
+};
 
+/** The accessibility blob persisted with `profiles.user_settings`. */
+export type AccessibilitySettings = {
+  chatFontSize?: number;
+  underlineLinks?: boolean;
+  displayNameStyles?: boolean;
+  uiDensity?: UiDensity;
+  chatDisplay?: ChatMessageDisplay;
+  groupSpacing?: number;
+  saturation?: number;
+  saturationCustomColors?: boolean;
+  highContrast?: boolean;
+  syncContrast?: boolean;
+  roleColors?: RoleColorMode;
+  officialMessages?: OfficialMessageMode;
+  showOnOff?: boolean;
+  reduceMotion?: boolean;
+  reduceMotionSystem?: boolean;
+  notificationDuration?: number;
+  playGifsFocused?: boolean;
+  playAnimatedEmoji?: boolean;
+  stickerAnimations?: StickerAnimation;
+  ttsRate?: number;
+  showImageDescriptions?: boolean;
+  legacyChatInput?: boolean;
 };
 
 export type BlockedUser = {

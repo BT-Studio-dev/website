@@ -7,8 +7,10 @@ import { SettingsNav, ALL_NAV_ITEMS, type SettingsSectionId } from "@/components
 import { AccountPanel } from "@/components/settings/account-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
 import { VoiceVideoPanel } from "@/components/settings/voice-panel";
+import { AccessibilityPanel } from "@/components/settings/accessibility-panel";
+import { LanguageTimePanel } from "@/components/settings/language-panel";
+import { KeybindsPanel } from "@/components/settings/keybinds-panel";
 import {
-  AccessibilityPanel,
   AppsPanel,
   BillingPanel,
   BoostPanel,
@@ -41,6 +43,8 @@ const TITLES: Record<SettingsSectionId | "edit-profiles", string> = {
   appearance: "Appearance",
   voice: "Voice & Video",
   accessibility: "Accessibility",
+  keybinds: "Keybinds",
+  language: "Language & Time",
   apps: "Authorized Apps",
   "edit-profiles": "Edit Profiles",
 };
@@ -48,6 +52,9 @@ const TITLES: Record<SettingsSectionId | "edit-profiles", string> = {
 const SUBTITLES: Partial<Record<SettingsSectionId | "edit-profiles", string>> = {
   account: "Manage your account information, security and status.",
   appearance: "Theme, density and colour — applied instantly.",
+  accessibility: "Readability, density, motion and audio — applied instantly.",
+  keybinds: "Keyboard shortcuts available everywhere in BT Comms.",
+  language: "Choose how BT Comms speaks and how it tells the time.",
   "edit-profiles": "Avatar, name and status shown across BT Comms.",
 };
 
@@ -311,6 +318,8 @@ export function SettingsModal({
               )}
 
               {section === "accessibility" && <AccessibilityPanel />}
+              {section === "keybinds" && <KeybindsPanel />}
+              {section === "language" && <LanguageTimePanel />}
 
               {section === "voice" && (
                 <VoiceVideoPanel

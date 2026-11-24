@@ -409,6 +409,7 @@ export function MessageFeed({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search messages in this channel…"
+            data-feed-search="true"
             className="w-full bg-transparent text-[13px] outline-none placeholder:text-dim"
           />
           <span className="shrink-0 text-[11px] text-dim">
@@ -421,7 +422,7 @@ export function MessageFeed({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="scroll-auto flex-1 overflow-y-auto px-4 pt-4 pb-2"
+        className="scroll-auto feed-scroll flex-1 overflow-y-auto px-4 pt-4 pb-2"
         aria-live="polite"
         aria-label={`Messages in ${channel.name}`}
       >
@@ -541,7 +542,7 @@ export function MessageFeed({
                     </div>
                   )}
 
-                  <div className="mt-0.5">
+                  <div className="mt-0.5 chat-text">
                     {message.content && (
                       <MessageContent content={message.content} selfId={profile.id} />
                     )}

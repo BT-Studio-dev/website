@@ -1,8 +1,16 @@
+import { formatClock, readLanguagePreference } from "./accessibility.ts";
+
+/**
+ * Clock time for a message.
+ *
+ * Honours User Settings → Language & Time: the locale comes from the saved
+ * language and the hour cycle from the saved time format (Auto follows the
+ * device). Both live in localStorage so this stays a pure function with no
+ * React context dependency — it is called from dozens of render paths.
+ */
 export function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  const { language, timeFormat } = readLanguagePreference();
+  return formatClock(iso, language, timeFormat);
 }
 
 /** Discord-style timestamp: "Today at 9:41 AM", "Yesterday at …", or a date. */

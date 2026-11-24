@@ -11,6 +11,9 @@ import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
 import { DmView } from "@/components/dm-view";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
+import { AccessibilityPanel } from "@/components/settings/accessibility-panel";
+import { KeybindsPanel } from "@/components/settings/keybinds-panel";
+import { LanguageTimePanel } from "@/components/settings/language-panel";
 import { VoiceVideoPanel } from "@/components/settings/voice-panel";
 import {
   DataPrivacyPanel,
@@ -1240,8 +1243,14 @@ function DemoSettings({
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line/50 px-8 py-5">
             <h1 className="truncate text-[19px] font-bold tracking-tight text-bright">
               {section === "appearance"
-                  ? "Appearance"
-                  : "Demo settings"}
+                ? "Appearance"
+                : section === "accessibility"
+                  ? "Accessibility"
+                  : section === "keybinds"
+                    ? "Keybinds"
+                    : section === "language"
+                      ? "Language & Time"
+                      : "Demo settings"}
             </h1>
             <button
               onClick={onClose}
@@ -1257,6 +1266,11 @@ function DemoSettings({
           <div className="scroll-auto min-h-0 flex-1 overflow-y-auto px-8 py-6">
             <div className="mx-auto max-w-3xl">
               {section === "appearance" && <AppearancePanel {...appearanceProps} />}
+              {/* Accessibility, Keybinds and Language persist to localStorage
+                  even in demo mode, so they are fully usable here. */}
+              {section === "accessibility" && <AccessibilityPanel />}
+              {section === "keybinds" && <KeybindsPanel />}
+              {section === "language" && <LanguageTimePanel />}
 
               {section === "voice" && (
                 <VoiceVideoPanel
@@ -1300,6 +1314,9 @@ function DemoSettings({
               )}
 
               {section !== "appearance" &&
+                section !== "accessibility" &&
+                section !== "keybinds" &&
+                section !== "language" &&
                 section !== "data" &&
                 section !== "privacy" &&
                 section !== "notifications" && (

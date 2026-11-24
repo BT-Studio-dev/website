@@ -213,6 +213,7 @@ export function DmView({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search this conversation…"
+              data-feed-search="true"
               className="w-full bg-transparent text-[13px] outline-none placeholder:text-dim"
             />
             <span className="shrink-0 text-[11px] text-dim">{filtered.length} results</span>
@@ -227,7 +228,7 @@ export function DmView({
         )}
 
         {/* feed */}
-        <div ref={scrollRef} className="scroll-auto flex-1 overflow-y-auto px-4 pt-4">
+        <div ref={scrollRef} className="scroll-auto feed-scroll flex-1 overflow-y-auto px-4 pt-4">
           <div className="mb-6 flex flex-col items-center rounded-xl border border-subtle bg-hover/55 px-4 py-6 text-center backdrop-blur-sm">
             {group ? (
               <GroupAvatar group={group} size={64} />
@@ -297,7 +298,7 @@ export function DmView({
 
                 <article
                   className={`group relative flex gap-3 rounded-md px-1.5 transition-colors hover:bg-hover/45 density-row ${
-                    grouped ? "" : "mt-3"
+                    grouped ? "" : "message-group"
                   }`}
                 >
                   <div className="w-10 shrink-0">
@@ -330,11 +331,13 @@ export function DmView({
                       </div>
                     )}
                     {message.content && (
-                      <MessageContent
-                        content={message.content}
-                        selfId={profile.id}
-                        onOpenProfile={onOpenProfile}
-                      />
+                      <div className="chat-text">
+                        <MessageContent
+                          content={message.content}
+                          selfId={profile.id}
+                          onOpenProfile={onOpenProfile}
+                        />
+                      </div>
                     )}
                     {(message.attachments ?? []).length > 0 && (
                       <AttachmentGrid attachments={message.attachments ?? []} />
@@ -398,7 +401,8 @@ export function DmView({
         </UploadDropzone>
       </div>
 
-      {/* right-hand member panel (1:1 conversations) */}
+      {/* right-hand member panel (1:1 conversations) — the feed above owns its
+          own scrollbar gutter, so the bar can never slide under this card. */}
       {!group && showPanel && peer?.id && (
         <DmProfilePanel
           peer={peer}

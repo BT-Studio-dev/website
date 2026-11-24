@@ -483,3 +483,27 @@ export const UploadCloudIcon = (p: IconProps) => (
     <path d="M12 21v-8m0 0-3 3m3-3 3 3" />
   </svg>
 );
+
+/* --------------------- Settings: keybinds, language (v6) --------------------- */
+
+export const KeybindIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
+    <path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9" />
+  </svg>
+);
+
+export const GlobeIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3.5 9h17M3.5 15h17" />
+    <path d="M12 3c2.4 2.4 3.6 5.4 3.6 9s-1.2 6.6-3.6 9c-2.4-2.4-3.6-5.4-3.6-9S9.6 5.4 12 3Z" />
+  </svg>
+);
+
+export const ClockIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7.5V12l3 2" />
+  </svg>
+);
