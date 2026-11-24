@@ -191,6 +191,19 @@
     }
   }
 
+  .animate-spin-slow {
+    animation: spinSlow 7s linear infinite;
+  }
+
+  @keyframes spinSlow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   @keyframes slideIn {
     from {
       opacity: 0;

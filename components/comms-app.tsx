@@ -15,6 +15,12 @@ import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
 import { DmView } from "@/components/dm-view";
 import { SettingsModal } from "@/components/settings/settings-modal";
+import {
+  EditProfileModal,
+  type ProfileDraft,
+  type ServerProfile,
+} from "@/components/profile/edit-profile-modal";
+import { ProfileCard } from "@/components/profile/profile-card";
 import { CheckIcon, CopyIcon, HashIcon, SpeakerIcon } from "@/components/icons";
 import {
   ensureDmChannel,
@@ -26,7 +32,11 @@ import {
   respondToRequest,
   sendDirectMessage,
   sendFriendRequest,
+  saveProfileCard,
+  fetchProfileCard,
   updateProfile,
+  uploadAvatar,
+  uploadBanner,
   type FriendEntry,
   type FriendRequest,
 } from "@/lib/social";
@@ -108,6 +118,14 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
 
   const [dialog, setDialog] = useState<Dialog>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  const [viewedCard, setViewedCard] = useState<Profile | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileNote, setProfileNote] = useState<
+    { tone: "info" | "success" | "error"; text: string } | null
+  >(null);
+  const [serverProfiles, setServerProfiles] = useState<Record<string, ServerProfile>>({});
   const [showMembers, setShowMembers] = useState(true);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -364,6 +382,30 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     setHomeTab("friends");
     router.replace("/channels/home");
   }, [router]);
+
+  /** Clicking an avatar opens either the editor (you) or a read-only card. */
+  const openProfile = useCallback(
+    async (userId: string) => {
+      if (userId === profile.id) {
+        setEditingProfileId(profile.id);
+        setProfileEditorOpen(true);
+        return;
+      }
+      const member = members.find((m) => m.user_id === userId)?.profile ?? null;
+      const friend = friends.find((f) => f.profile.id === userId)?.profile ?? null;
+      const dmPeer = dmChannels.find((d) => d.peer?.id === userId)?.peer ?? null;
+      const fallback = member ?? friend ?? dmPeer;
+      if (fallback) {
+        setViewedCard({
+          ...fallback,
+          created_at: new Date().toISOString(),
+        } as Profile);
+      }
+      const fresh = await fetchProfileCard(supabase, userId);
+      if (fresh) setViewedCard(fresh);
+    },
+    [profile.id, members, friends, dmChannels, supabase],
+  );
 
   const openDm = useCallback(
     async (userId: string) => {
@@ -687,6 +729,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               profile={profile}
               onSend={(content) => void sendDm(content)}
               onDelete={(id) => void deleteDm(id)}
+              onOpenProfile={(userId) => void openProfile(userId)}
             />
           )}
 
@@ -745,6 +788,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               voiceStates={voiceStates}
               viewerId={profile.id}
               onClose={() => setShowMembers(false)}
+              onOpenProfile={(userId) => void openProfile(userId)}
             />
           </div>
         </>
@@ -763,10 +807,107 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           setStatus(next.status);
         }}
         pendingRequests={pendingCount}
+        onEditProfile={() => {
+          setSettingsOpen(false);
+          setEditingProfileId(profile.id);
+          setProfileEditorOpen(true);
+        }}
         onLogout={() => {
           void supabase.auth.signOut().then(() => router.replace("/login"));
         }}
       />
+
+      {/* Edit Profile studio */}
+      <EditProfileModal
+        open={profileEditorOpen}
+        onClose={() => {
+          setProfileEditorOpen(false);
+          setProfileNote(null);
+        }}
+        profile={editingProfileId === profile.id ? profile : (viewedCard ?? profile)}
+        servers={servers.map((s) => ({ id: s.id, name: s.name, icon: s.icon }))}
+        serverProfiles={serverProfiles}
+        saving={profileSaving}
+        note={profileNote}
+        onUploadAvatar={async (file) => {
+          const { url } = await uploadAvatar(supabase, profile.id, file);
+          return url;
+        }}
+        onUploadBanner={async (file) => {
+          const { url } = await uploadBanner(supabase, profile.id, file);
+          return url;
+        }}
+        onSave={async (draft: ProfileDraft, nextServerProfiles: Record<string, ServerProfile>) => {
+          if (editingProfileId !== profile.id) {
+            setProfileNote({ tone: "error", text: "You can only edit your own profile." });
+            return;
+          }
+          setProfileSaving(true);
+          const { profile: updated, error } = await saveProfileCard(supabase, profile.id, {
+            display_name: draft.display_name.trim() || profile.username,
+            bio: draft.bio.trim() || null,
+            pronouns: draft.pronouns.trim() || null,
+            server_tag: draft.server_tag.trim() || null,
+            avatar_url: draft.avatar_url,
+            banner_color: draft.banner_color,
+            banner_url: draft.banner_url,
+            theme_primary: draft.theme_primary,
+            theme_secondary: draft.theme_secondary,
+            avatar_decoration: draft.avatar_decoration,
+            profile_effect: draft.profile_effect,
+            name_style: draft.name_style,
+            nameplate: draft.nameplate,
+            connections: draft.connections,
+            widgets: draft.widgets,
+            custom_status: draft.custom_status.trim() || null,
+            custom_status_emoji: draft.custom_status_emoji.trim() || null,
+          });
+          setProfileSaving(false);
+          if (error) {
+            setProfileNote({ tone: "error", text: error });
+            return;
+          }
+          if (updated) {
+            setProfile(updated);
+            setStatus(updated.status);
+          }
+          setServerProfiles(nextServerProfiles);
+          setProfileNote({ tone: "success", text: "Profile saved." });
+          flash("Profile updated");
+          setTimeout(() => setProfileEditorOpen(false), 700);
+        }}
+      />
+
+      {/* Read-only profile card for someone else */}
+      <Modal
+        open={Boolean(viewedCard) && !profileEditorOpen}
+        title={viewedCard ? `${viewedCard.display_name || viewedCard.username}'s profile` : "Profile"}
+        description="Click Message to open a DM, or close to carry on."
+        onClose={() => setViewedCard(null)}
+      >
+        {viewedCard && (
+          <ProfileCard
+            profile={viewedCard}
+            memberSince={new Date(viewedCard.created_at).toLocaleDateString(undefined, {
+              month: "long",
+              year: "numeric",
+            })}
+            compact
+            actionSlot={
+              <button
+                onClick={() => {
+                  const id = viewedCard.id;
+                  setViewedCard(null);
+                  void openDm(id);
+                }}
+                className="mb-1 rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
+              >
+                Message
+              </button>
+            }
+          />
+        )}
+      </Modal>
 
       {/* New DM picker */}
       <Modal

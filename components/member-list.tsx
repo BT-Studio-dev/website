@@ -18,11 +18,14 @@ export function MemberList({
   voiceStates,
   viewerId,
   onClose,
+  onOpenProfile,
 }: {
   members: ServerMember[];
   voiceStates: VoiceState[];
   viewerId: string;
   onClose?: () => void;
+  /** Clicking an avatar/name opens that member's profile card. */
+  onOpenProfile?: (userId: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -88,6 +91,7 @@ export function MemberList({
               key={member.user_id}
               member={member}
               isViewer={member.user_id === viewerId}
+              onOpenProfile={onOpenProfile}
               inVoice={voiceByUser.has(member.user_id)}
               copied={copiedId === member.user_id}
               onCopy={() => void copyUsername(member.profile?.username ?? "member", member.user_id)}
@@ -103,6 +107,7 @@ export function MemberList({
                 key={member.user_id}
                 member={member}
                 isViewer={member.user_id === viewerId}
+              onOpenProfile={onOpenProfile}
                 dim
                 inVoice={voiceByUser.has(member.user_id)}
                 copied={copiedId === member.user_id}
@@ -150,6 +155,7 @@ function MemberRow({
   dim,
   copied,
   onCopy,
+  onOpenProfile,
 }: {
   member: ServerMember;
   isViewer: boolean;
@@ -157,6 +163,7 @@ function MemberRow({
   dim?: boolean;
   copied: boolean;
   onCopy: () => void;
+  onOpenProfile?: (userId: string) => void;
 }) {
   const profile = member.profile;
   const name = profile?.display_name || profile?.username || "Member";
@@ -167,16 +174,29 @@ function MemberRow({
         dim ? "opacity-45 hover:opacity-80" : ""
       }`}
     >
-      <Avatar
-        name={name}
-        src={profile?.avatar_url}
-        accent={profile?.accent_color}
-        size={30}
-        status={profile?.status}
-      />
+      <button
+        type="button"
+        onClick={() => onOpenProfile?.(member.user_id)}
+        aria-label={`Open ${name}'s profile`}
+        className="shrink-0 rounded-full transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blurple"
+      >
+        <Avatar
+          name={name}
+          src={profile?.avatar_url}
+          accent={profile?.accent_color}
+          size={30}
+          status={profile?.status}
+        />
+      </button>
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1 truncate text-[12.5px] font-medium text-bright">
-          <span className="truncate">{name}</span>
+          <button
+            type="button"
+            onClick={() => onOpenProfile?.(member.user_id)}
+            className="truncate text-left hover:underline"
+          >
+            {name}
+          </button>
           {isViewer && (
             <span className="shrink-0 rounded border border-line px-1 text-[8.5px] tracking-wide text-dim uppercase">
               you

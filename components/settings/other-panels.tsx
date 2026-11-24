@@ -6,14 +6,13 @@ import {
   CardLabel,
   Field,
   InlineNote,
-  RadioRow,
   Select,
   SettingsButton,
   SettingsCard,
   SettingsSection,
   Toggle,
 } from "@/components/settings/primitives";
-import { MicIcon, SpeakerIcon, SparkleIcon, BoostIcon, GiftIcon, CardIcon, AppsIcon, DataIcon, BellIcon, EyeOffIcon } from "@/components/icons";
+import { MicIcon, SpeakerIcon, SparkleIcon, BoostIcon, GiftIcon, CardIcon, AppsIcon } from "@/components/icons";
 
 /* ------------------------------- Voice & Video ------------------------------ */
 
@@ -279,193 +278,6 @@ export function AccessibilityPanel() {
           </p>
         </div>
       </SettingsCard>
-    </SettingsSection>
-  );
-}
-
-/* --------------------------- Privacy / Messaging --------------------------- */
-
-export function PrivacyPanel({
-  dmPrivacy,
-  onDmPrivacyChange,
-  messageFilter,
-  onMessageFilterChange,
-  notifyFriendRequests,
-  onNotifyFriendRequestsChange,
-}: {
-  dmPrivacy: "everyone" | "friends" | "none";
-  onDmPrivacyChange: (value: "everyone" | "friends" | "none") => void;
-  messageFilter: "off" | "standard" | "strict";
-  onMessageFilterChange: (value: "off" | "standard" | "strict") => void;
-  notifyFriendRequests: boolean;
-  onNotifyFriendRequestsChange: (value: boolean) => void;
-}) {
-  return (
-    <SettingsSection
-      title="Messaging Permissions"
-      description="Control who can slide into your DMs and how aggressively we filter unwanted content."
-    >
-      <SettingsCard>
-        <CardLabel>Who can DM you</CardLabel>
-        <div className="mt-2">
-          <RadioRow
-            value={dmPrivacy}
-            onChange={onDmPrivacyChange}
-            options={[
-              { value: "everyone", label: "Everyone", description: "Anyone in a shared server can message you." },
-              { value: "friends", label: "Friends only", description: "Only people on your friends list. Recommended." },
-              { value: "none", label: "Nobody", description: "Only you can start conversations." },
-            ]}
-          />
-        </div>
-      </SettingsCard>
-
-      <SettingsCard>
-        <CardLabel>Message filtering</CardLabel>
-        <div className="mt-2">
-          <RadioRow
-            value={messageFilter}
-            onChange={onMessageFilterChange}
-            options={[
-              { value: "off", label: "Off", description: "Show every message." },
-              { value: "standard", label: "Standard", description: "Filter obvious spam and unsolicited links." },
-              { value: "strict", label: "Strict", description: "Hide messages from non-friends until you accept." },
-            ]}
-          />
-        </div>
-      </SettingsCard>
-
-      <SettingsCard>
-        <Toggle
-          checked={notifyFriendRequests}
-          onChange={onNotifyFriendRequestsChange}
-          label="Allow friend requests"
-          description="Anyone can send you a request using your username."
-        />
-      </SettingsCard>
-
-      <SettingsCard>
-        <div className="flex items-start gap-3">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-blurple/15 text-blurple-soft">
-            <EyeOffIcon width={16} height={16} />
-          </span>
-          <div>
-            <p className="text-[13px] font-semibold text-bright">Blocked users</p>
-            <p className="mt-0.5 text-[12px] text-muted">
-              Blocked people can&apos;t DM you, see your status, or add you.
-            </p>
-            <p className="mt-2 text-[12px] text-dim">No blocked users yet.</p>
-          </div>
-        </div>
-      </SettingsCard>
-    </SettingsSection>
-  );
-}
-
-/* ------------------------------ Notifications ----------------------------- */
-
-export function NotificationsPanel({
-  dm,
-  server,
-  friends,
-  onChange,
-}: {
-  dm: boolean;
-  server: boolean;
-  friends: boolean;
-  onChange: (patch: { dm?: boolean; server?: boolean; friends?: boolean }) => void;
-}) {
-  return (
-    <SettingsSection
-      title="Notifications"
-      description="Choose what deserves your attention."
-    >
-      <SettingsCard>
-        <CardLabel>
-          <span className="flex items-center gap-1.5">
-            <BellIcon width={13} height={13} /> In-app
-          </span>
-        </CardLabel>
-        <div className="mt-3 space-y-3">
-          <Toggle
-            checked={dm}
-            onChange={(value) => onChange({ dm: value })}
-            label="Direct messages"
-            description="Badge the Home icon when someone DMs you."
-          />
-          <Toggle
-            checked={server}
-            onChange={(value) => onChange({ server: value })}
-            label="Server messages"
-            description="Highlight servers with unread activity."
-          />
-          <Toggle
-            checked={friends}
-            onChange={(value) => onChange({ friends: value })}
-            label="Friend activity"
-            description="Ping me when a friend comes online or starts a game."
-          />
-        </div>
-      </SettingsCard>
-      <SettingsCard>
-        <CardLabel>Sound</CardLabel>
-        <div className="mt-2">
-          <Select
-            value="default"
-            onChange={() => undefined}
-            options={[
-              { value: "default", label: "Default message sound" },
-              { value: "soft", label: "Soft chime" },
-              { value: "none", label: "None" },
-            ]}
-          />
-        </div>
-      </SettingsCard>
-    </SettingsSection>
-  );
-}
-
-/* --------------------------------- Data ---------------------------------- */
-
-export function DataPanel() {
-  return (
-    <SettingsSection
-      title="Data & Privacy"
-      description="Understand what we store and export or delete it any time."
-    >
-      <SettingsCard>
-        <CardLabel>
-          <span className="flex items-center gap-1.5">
-            <DataIcon width={13} height={13} /> What we store
-          </span>
-        </CardLabel>
-        <div className="mt-2 space-y-1.5 text-[12.5px] leading-relaxed text-muted">
-          <p>· Your profile: username, display name, avatar, bio, custom status.</p>
-          <p>· Messages you send in servers and DMs.</p>
-          <p>· Appearance and privacy preferences.</p>
-          <p className="text-dim">We never sell data or serve third-party ads.</p>
-        </div>
-      </SettingsCard>
-      <SettingsCard>
-        <Toggle
-          checked={false}
-          onChange={() => undefined}
-          label="Usage analytics"
-          description="Share anonymous feature usage to help us prioritise."
-        />
-      </SettingsCard>
-      <SettingsCard>
-        <Toggle
-          checked={false}
-          onChange={() => undefined}
-          label="Personalised recommendations"
-          description="Suggest servers and people based on your activity."
-        />
-      </SettingsCard>
-      <div className="flex flex-wrap gap-2">
-        <SettingsButton tone="secondary">Request data export</SettingsButton>
-        <SettingsButton tone="danger">Delete my account</SettingsButton>
-      </div>
     </SettingsSection>
   );
 }

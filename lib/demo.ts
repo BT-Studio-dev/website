@@ -31,6 +31,64 @@ const ME: Profile = {
   status: "online",
   bio: "Demo mode · building BT Comms",
   created_at: "2026-10-02T10:00:00.000Z",
+  pronouns: "she/her",
+  server_tag: "BT",
+  banner_color: "#7c3aed",
+  theme_primary: "#7c3aed",
+  theme_secondary: "#0ea5e9",
+  avatar_decoration: "aurora",
+  profile_effect: "sparkle",
+  name_style: "neon",
+  nameplate: "glass",
+  custom_status: "Shipping the profile studio",
+  custom_status_emoji: "🚀",
+  connections: [
+    { id: "demo-c1", kind: "twitch", handle: "adalovelace", url: "https://twitch.tv/adalovelace" },
+    { id: "demo-c2", kind: "youtube", handle: "@ada", url: "https://youtube.com/@ada" },
+    { id: "demo-c3", kind: "github", handle: "ada", url: "https://github.com/ada" },
+  ],
+  widgets: [
+    { id: "demo-w1", kind: "favorite", game: { id: "g-hades2", name: "Hades II", cover: null, genre: "Roguelike" } },
+    { id: "demo-w2", kind: "like", game: { id: "g-celeste", name: "Celeste", cover: null, genre: "Platformer" } },
+    { id: "demo-w3", kind: "want", game: { id: "g-silksong", name: "Hollow Knight: Silksong", cover: null, genre: "Metroidvania" } },
+  ],
+  user_settings: {
+    dataImprove: true,
+    dataPersonalize: false,
+    voiceInClips: true,
+    profileShareScope: "friends_servers",
+    profileShareUpdates: true,
+    sensitiveDmFriends: "show",
+    sensitiveDmOthers: "blur",
+    sensitiveServer: "blur",
+    spamFilter: "non_friends",
+    dmPrivacy: "everyone",
+    dmAllowServerMembers: true,
+    dmRequests: true,
+    friendRequestsEnabled: true,
+    friendRequestsFrom: "server_members",
+    friendRequestNotes: true,
+    notifyDesktop: true,
+    notifyStreaming: true,
+    notifyFriendsOnline: false,
+    notifyEvents: true,
+    notifyProfileUpdates: false,
+    notifyReactions: "all",
+    soundMessage: true,
+    soundCurrentChannel: true,
+    soundRing: true,
+    soundDisabled: false,
+    unreadBadge: true,
+    emailCommunication: true,
+    emailSocial: false,
+    emailAnnouncements: true,
+    emailTips: true,
+    emailRecommendations: false,
+    ttsEnabled: false,
+    ttsRate: 1,
+    advancedTelemetry: false,
+  },
+  bt_pro: true,
 };
 
 const AUTHOR = (over: Partial<MessageAuthor> & { id: string; username: string }): MessageAuthor => ({
@@ -341,6 +399,19 @@ export const demoStore = {
         | "accent_color"
         | "banner_color"
         | "avatar_url"
+        | "banner_url"
+        | "theme_primary"
+        | "theme_secondary"
+        | "avatar_decoration"
+        | "profile_effect"
+        | "name_style"
+        | "nameplate"
+        | "pronouns"
+        | "server_tag"
+        | "connections"
+        | "widgets"
+        | "user_settings"
+        | "bt_pro"
       >
     >,
   ) {

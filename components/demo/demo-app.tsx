@@ -10,7 +10,16 @@ import { Avatar } from "@/components/avatar";
 import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
 import { DmView } from "@/components/dm-view";
-import { AppearancePanel, EditProfilesPanel } from "@/components/settings/appearance-panel";
+import { AppearancePanel } from "@/components/settings/appearance-panel";
+import {
+  DataPrivacyPanel,
+  MessagingPermissionsPanel,
+  NotificationsPanel,
+} from "@/components/settings/privacy-panels";
+import {
+  EditProfileModal,
+  type ProfileDraft,
+} from "@/components/profile/edit-profile-modal";
 import { SettingsNav, type SettingsSectionId } from "@/components/settings/settings-nav";
 import { SettingsButton, SettingsCard } from "@/components/settings/primitives";
 import { AppearanceProvider } from "@/lib/appearance";
@@ -36,7 +45,9 @@ import type {
   DmChannel,
   Message,
   Presence,
+  Profile,
   ServerMember,
+  UserSettings,
   VoiceState,
 } from "@/lib/types";
 import type { FriendEntry, FriendRequest } from "@/lib/social";
@@ -62,6 +73,7 @@ export function DemoApp({
   const [toast, setToast] = useState<string | null>(null);
   const [bannerVisible, setBannerVisible] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   const me = demoStore.profile;
 
@@ -439,14 +451,57 @@ export function DemoApp({
                   voiceStates={voiceStates}
                   viewerId={DEMO_USER_ID}
                   onClose={() => setShowMembers(false)}
+                  onOpenProfile={(userId) => {
+                    if (userId === DEMO_USER_ID) {
+                      setEditorOpen(true);
+                      return;
+                    }
+                    flash("Demo mode — profiles open for your own account.");
+                  }}
                 />
               </div>
             </>
           )}
         </div>
 
+        {editorOpen && (
+          <EditProfileModal
+            open
+            profile={demoStore.profile}
+            servers={demoStore.servers.map((s) => ({ id: s.id, name: s.name, icon: s.icon }))}
+            onClose={() => setEditorOpen(false)}
+            onSave={(draft: ProfileDraft) => {
+              demoStore.updateProfile({
+                display_name: draft.display_name.trim() || demoStore.profile.username,
+                bio: draft.bio.trim() || null,
+                pronouns: draft.pronouns.trim() || null,
+                server_tag: draft.server_tag.trim() || null,
+                avatar_url: draft.avatar_url,
+                banner_color: draft.banner_color,
+                banner_url: draft.banner_url,
+                theme_primary: draft.theme_primary,
+                theme_secondary: draft.theme_secondary,
+                avatar_decoration: draft.avatar_decoration as Profile["avatar_decoration"],
+                profile_effect: draft.profile_effect as Profile["profile_effect"],
+                name_style: draft.name_style as Profile["name_style"],
+                nameplate: draft.nameplate as Profile["nameplate"],
+                connections: draft.connections,
+                widgets: draft.widgets,
+                custom_status: draft.custom_status.trim() || null,
+                custom_status_emoji: draft.custom_status_emoji.trim() || null,
+              });
+              setEditorOpen(false);
+              flash("Profile updated");
+            }}
+          />
+        )}
+
         {settingsOpen && (
           <DemoSettings
+            onEditProfile={() => {
+              setSettingsOpen(false);
+              setEditorOpen(true);
+            }}
             onClose={() => setSettingsOpen(false)}
             onSaved={(message) => {
               setSettingsOpen(false);
@@ -806,16 +861,17 @@ function SimpleView({
 function DemoSettings({
   onClose,
   onSaved,
+  onEditProfile,
 }: {
   onClose: () => void;
   onSaved: (message: string) => void;
+  onEditProfile: () => void;
 }) {
   const [section, setSection] = useState<SettingsSectionId | "edit-profiles">("appearance");
   const [query, setQuery] = useState("");
-  const [displayName, setDisplayName] = useState(demoStore.profile.display_name);
-  const [bio, setBio] = useState(demoStore.profile.bio ?? "");
-  const [customStatus, setCustomStatus] = useState(demoStore.profile.custom_status ?? "");
-  const [statusEmoji, setStatusEmoji] = useState(demoStore.profile.custom_status_emoji ?? "");
+  const [settings, setSettings] = useState<UserSettings>(
+    demoStore.profile.user_settings ?? {},
+  );
   const [accentColor, setAccentColor] = useState(demoStore.profile.accent_color);
   const [bannerColor, setBannerColor] = useState(demoStore.profile.banner_color ?? null);
 
@@ -861,7 +917,7 @@ function DemoSettings({
           onSelect={(id) => setSection(id)}
           query={query}
           onQueryChange={setQuery}
-          onEditProfiles={() => setSection("edit-profiles")}
+          onEditProfiles={onEditProfile}
           onLogout={onClose}
           pendingRequests={0}
         />
@@ -869,9 +925,7 @@ function DemoSettings({
         <main className="relative flex min-w-0 flex-1 flex-col bg-panel">
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line/50 px-8 py-5">
             <h1 className="truncate text-[19px] font-bold tracking-tight text-bright">
-              {section === "edit-profiles"
-                ? "Edit Profiles"
-                : section === "appearance"
+              {section === "appearance"
                   ? "Appearance"
                   : "Demo settings"}
             </h1>
@@ -890,34 +944,43 @@ function DemoSettings({
             <div className="mx-auto max-w-3xl">
               {section === "appearance" && <AppearancePanel {...appearanceProps} />}
 
-              {section === "edit-profiles" && (
-                <EditProfilesPanel
-                  displayName={displayName}
-                  onDisplayNameChange={setDisplayName}
-                  username={me.username}
-                  bio={bio}
-                  onBioChange={setBio}
-                  customStatus={customStatus}
-                  onCustomStatusChange={setCustomStatus}
-                  statusEmoji={statusEmoji}
-                  onStatusEmojiChange={setStatusEmoji}
-                  avatarUrl={me.avatar_url}
-                  onAvatarFile={() => undefined}
-                  onSave={() => {
-                    demoStore.updateProfile({
-                      display_name: displayName.trim() || me.username,
-                      bio: bio.trim() || null,
-                      custom_status: customStatus.trim() || null,
-                      custom_status_emoji: statusEmoji.trim() || null,
-                    });
-                    onSaved("Profile saved");
+              {section === "data" && (
+                <DataPrivacyPanel
+                  settings={settings}
+                  onChange={(patch) => {
+                    const next = { ...settings, ...patch };
+                    setSettings(next);
+                    demoStore.updateProfile({ user_settings: next });
                   }}
-                  saving={false}
-                  note={null}
                 />
               )}
 
-              {section !== "appearance" && section !== "edit-profiles" && (
+              {section === "privacy" && (
+                <MessagingPermissionsPanel
+                  settings={settings}
+                  onChange={(patch) => {
+                    const next = { ...settings, ...patch };
+                    setSettings(next);
+                    demoStore.updateProfile({ user_settings: next });
+                  }}
+                />
+              )}
+
+              {section === "notifications" && (
+                <NotificationsPanel
+                  settings={settings}
+                  onChange={(patch) => {
+                    const next = { ...settings, ...patch };
+                    setSettings(next);
+                    demoStore.updateProfile({ user_settings: next });
+                  }}
+                />
+              )}
+
+              {section !== "appearance" &&
+                section !== "data" &&
+                section !== "privacy" &&
+                section !== "notifications" && (
                 <SettingsCard>
                   <p className="text-[13px] text-muted">
                     <span className="font-semibold text-bright">You&apos;re in demo mode.</span>{" "}

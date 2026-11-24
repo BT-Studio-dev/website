@@ -23,6 +23,20 @@ export type Profile = {
   notify_direct_messages?: boolean;
   notify_server_messages?: boolean;
   notify_friend_requests?: boolean;
+  /* v3 — profile card customization */
+  banner_url?: string | null;
+  theme_primary?: string | null;
+  theme_secondary?: string | null;
+  avatar_decoration?: AvatarDecorationId;
+  profile_effect?: ProfileEffectId;
+  name_style?: NameStyleId;
+  nameplate?: NameplateId;
+  pronouns?: string | null;
+  server_tag?: string | null;
+  connections?: ProfileConnection[];
+  widgets?: ProfileWidget[];
+  user_settings?: UserSettings;
+  bt_pro?: boolean;
 };
 
 export type Server = {
@@ -156,4 +170,118 @@ export type ActiveActivity = {
   title: string;
   detail?: string;
   started_at?: string;
+};
+
+/* ------------------------------------------------------------------ */
+/* v3: profile cards, widgets, user settings                            */
+/* ------------------------------------------------------------------ */
+
+export type AvatarDecorationId =
+  | "none"
+  | "aurora"
+  | "ember"
+  | "circuit"
+  | "bloom"
+  | "stars";
+
+export type ProfileEffectId = "none" | "sparkle" | "glow" | "confetti" | "snow";
+
+export type NameStyleId =
+  | "default"
+  | "neon"
+  | "gradient"
+  | "sunset"
+  | "outline"
+  | "serif"
+  | "mono";
+
+export type NameplateId = "none" | "glass" | "neon" | "gradient" | "sunset" | "grid";
+
+export type ConnectionKind =
+  | "roblox"
+  | "tiktok"
+  | "twitch"
+  | "youtube"
+  | "github"
+  | "spotify"
+  | "steam";
+
+export type ProfileConnection = {
+  id: string;
+  kind: ConnectionKind;
+  handle: string;
+  url: string;
+};
+
+export type WidgetKind = "favorite" | "like" | "want";
+
+export type WidgetGame = {
+  id: string;
+  name: string;
+  cover: string | null;
+  genre?: string | null;
+};
+
+export type ProfileWidget = {
+  id: string;
+  kind: WidgetKind;
+  game: WidgetGame;
+};
+
+export type SpamFilter = "all" | "non_friends" | "off";
+export type SensitiveFilter = "show" | "blur" | "block";
+export type ProfileShareScope = "friends_servers" | "friends_small_servers" | "friends";
+export type FriendRequestPolicy = "everyone" | "friends_of_friends" | "server_members" | "nobody";
+export type ReactionNotify = "all" | "dm" | "off";
+
+/** Everything on the Data & Privacy / Messaging / Notifications tabs. */
+export type UserSettings = {
+  /* Data & privacy */
+  dataImprove?: boolean;
+  dataPersonalize?: boolean;
+  voiceInClips?: boolean;
+  profileShareScope?: ProfileShareScope;
+  profileShareUpdates?: boolean;
+  /* Content & spam */
+  sensitiveDmFriends?: SensitiveFilter;
+  sensitiveDmOthers?: SensitiveFilter;
+  sensitiveServer?: SensitiveFilter;
+  spamFilter?: SpamFilter;
+  /* DMs & friend requests */
+  dmPrivacy?: "everyone" | "friends" | "none";
+  dmAllowServerMembers?: boolean;
+  dmRequests?: boolean;
+  friendRequestsEnabled?: boolean;
+  friendRequestsFrom?: FriendRequestPolicy;
+  friendRequestNotes?: boolean;
+  /* Notifications */
+  notifyDesktop?: boolean;
+  notifyStreaming?: boolean;
+  notifyFriendsOnline?: boolean;
+  notifyEvents?: boolean;
+  notifyProfileUpdates?: boolean;
+  notifyReactions?: ReactionNotify;
+  /* Sounds */
+  soundMessage?: boolean;
+  soundCurrentChannel?: boolean;
+  soundRing?: boolean;
+  soundDisabled?: boolean;
+  /* Badges & email */
+  unreadBadge?: boolean;
+  emailCommunication?: boolean;
+  emailSocial?: boolean;
+  emailAnnouncements?: boolean;
+  emailTips?: boolean;
+  emailRecommendations?: boolean;
+  /* Advanced */
+  ttsEnabled?: boolean;
+  ttsRate?: number;
+  advancedTelemetry?: boolean;
+};
+
+export type BlockedUser = {
+  id: string;
+  blocked_id: string;
+  created_at: string;
+  profile: MessageAuthor | null;
 };

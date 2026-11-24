@@ -5,22 +5,28 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { CloseIcon } from "@/components/icons";
 import { SettingsNav, ALL_NAV_ITEMS, type SettingsSectionId } from "@/components/settings/settings-nav";
 import { AccountPanel } from "@/components/settings/account-panel";
-import { AppearancePanel, EditProfilesPanel } from "@/components/settings/appearance-panel";
+import { AppearancePanel } from "@/components/settings/appearance-panel";
 import {
   AccessibilityPanel,
   AppsPanel,
   BillingPanel,
   BoostPanel,
-  DataPanel,
   GiftsPanel,
-  NotificationsPanel,
-  PrivacyPanel,
   ProPanel,
   SubscriptionsPanel,
   VoicePanel,
 } from "@/components/settings/other-panels";
-import { updateProfile, uploadAvatar, type ProfilePatch } from "@/lib/social";
-import type { Profile } from "@/lib/types";
+import {
+  DataPrivacyPanel,
+  MessagingPermissionsPanel,
+  NotificationsPanel,
+} from "@/components/settings/privacy-panels";
+import {
+  updateProfile,
+  saveUserSettings,
+  type ProfilePatch,
+} from "@/lib/social";
+import type { Profile, UserSettings } from "@/lib/types";
 
 const TITLES: Record<SettingsSectionId | "edit-profiles", string> = {
   account: "My Account",
@@ -55,6 +61,7 @@ export function SettingsModal({
   onProfileSaved,
   pendingRequests,
   onLogout,
+  onEditProfile,
 }: {
   open: boolean;
   onClose: () => void;
@@ -65,6 +72,8 @@ export function SettingsModal({
   onProfileSaved: (profile: Profile) => void;
   pendingRequests: number;
   onLogout: () => void;
+  /** Opens the full Edit Profile studio (guests/demo get a no-op). */
+  onEditProfile?: () => void;
 }) {
   const [section, setSection] = useState<SettingsSectionId | "edit-profiles">("account");
   const [query, setQuery] = useState("");
@@ -72,37 +81,19 @@ export function SettingsModal({
   const [note, setNote] = useState<{ tone: "info" | "success" | "error"; text: string } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Editable profile drafts (Edit Profiles + Appearance accents share these)
-  const [displayName, setDisplayName] = useState(profile.display_name);
-  const [bio, setBio] = useState(profile.bio ?? "");
-  const [customStatus, setCustomStatus] = useState(profile.custom_status ?? "");
-  const [statusEmoji, setStatusEmoji] = useState(profile.custom_status_emoji ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url);
+  // Appearance accents
   const [accentColor, setAccentColor] = useState(profile.accent_color);
   const [bannerColor, setBannerColor] = useState(profile.banner_color ?? profile.accent_color);
 
-  // Persisted preference mirrors
-  const [dmPrivacy, setDmPrivacy] = useState(profile.dm_privacy ?? "friends");
-  const [messageFilter, setMessageFilter] = useState(profile.message_filter ?? "standard");
-  const [notifyDm, setNotifyDm] = useState(profile.notify_direct_messages ?? true);
-  const [notifyServer, setNotifyServer] = useState(profile.notify_server_messages ?? true);
-  const [notifyFriends, setNotifyFriends] = useState(profile.notify_friend_requests ?? true);
+  // Data & Privacy / Messaging Permissions / Notifications live in one JSONB blob.
+  const [settings, setSettings] = useState<UserSettings>(profile.user_settings ?? {});
 
   // Reset drafts when the panel is (re)opened.
   useEffect(() => {
     if (!open) return;
-    setDisplayName(profile.display_name);
-    setBio(profile.bio ?? "");
-    setCustomStatus(profile.custom_status ?? "");
-    setStatusEmoji(profile.custom_status_emoji ?? "");
-    setAvatarUrl(profile.avatar_url);
     setAccentColor(profile.accent_color);
     setBannerColor(profile.banner_color ?? profile.accent_color);
-    setDmPrivacy(profile.dm_privacy ?? "friends");
-    setMessageFilter(profile.message_filter ?? "standard");
-    setNotifyDm(profile.notify_direct_messages ?? true);
-    setNotifyServer(profile.notify_server_messages ?? true);
-    setNotifyFriends(profile.notify_friend_requests ?? true);
+    setSettings(profile.user_settings ?? {});
     setNote(null);
   }, [open, profile]);
 
@@ -141,36 +132,23 @@ export function SettingsModal({
     [supabase, profile.id, onProfileSaved],
   );
 
-  async function saveProfile() {
-    const ok = await persist(
-      {
-        display_name: displayName.trim() || profile.username,
-        bio: bio.trim() || null,
-        custom_status: customStatus.trim() || null,
-        custom_status_emoji: statusEmoji.trim() || null,
-        avatar_url: avatarUrl,
-        accent_color: accentColor,
-        banner_color: bannerColor,
-      },
-      "Profile saved.",
-    );
-    if (ok) setSection("account");
-  }
-
-  async function handleAvatar(file: File) {
-    if (file.size > 4 * 1024 * 1024) {
-      setNote({ tone: "error", text: "That image is larger than 4 MB." });
-      return;
-    }
-    setNote({ tone: "info", text: "Uploading avatar…" });
-    const { url, error } = await uploadAvatar(supabase, profile.id, file);
-    if (error || !url) {
-      setNote({ tone: "error", text: error ?? "Upload failed." });
-      return;
-    }
-    setAvatarUrl(url);
-    await persist({ avatar_url: url }, "Avatar updated.");
-  }
+  /**
+   * Toggles/radios save the moment they change, and the blob is merged so
+   * concurrent panels never clobber each other.
+   */
+  const patchSettings = useCallback(
+    (patch: Partial<UserSettings>) => {
+      setSettings((prev) => {
+        const next = { ...prev, ...patch };
+        void saveUserSettings(supabase, profile.id, next).then(({ error }) => {
+          if (error) setNote({ tone: "error", text: error });
+          else onProfileSaved({ ...profile, user_settings: next });
+        });
+        return next;
+      });
+    },
+    [supabase, profile, onProfileSaved],
+  );
 
   const filteredEmpty = useMemo(
     () =>
@@ -201,8 +179,8 @@ export function SettingsModal({
           query={query}
           onQueryChange={setQuery}
           onEditProfiles={() => {
-            setSection("edit-profiles");
             setNote(null);
+            onEditProfile?.();
           }}
           onLogout={onLogout}
           pendingRequests={pendingRequests}
@@ -256,22 +234,20 @@ export function SettingsModal({
               )}
 
               {section === "edit-profiles" && (
-                <EditProfilesPanel
-                  displayName={displayName}
-                  onDisplayNameChange={setDisplayName}
-                  username={profile.username}
-                  bio={bio}
-                  onBioChange={setBio}
-                  customStatus={customStatus}
-                  onCustomStatusChange={setCustomStatus}
-                  statusEmoji={statusEmoji}
-                  onStatusEmojiChange={setStatusEmoji}
-                  avatarUrl={avatarUrl}
-                  onAvatarFile={(file) => void handleAvatar(file)}
-                  onSave={() => void saveProfile()}
-                  saving={saving}
-                  note={note}
-                />
+                <div className="rounded-xl border border-line/80 bg-raised/60 p-5 text-center">
+                  <p className="text-[14px] font-semibold text-bright">
+                    The profile studio opens in a moment…
+                  </p>
+                  <p className="mt-1 text-[12.5px] text-muted">
+                    If it didn&apos;t, use the button below.
+                  </p>
+                  <button
+                    onClick={() => onEditProfile?.()}
+                    className="mt-3 rounded-lg bg-blurple px-4 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft"
+                  >
+                    Open Edit Profile
+                  </button>
+                </div>
               )}
 
               {section === "account" && (
@@ -284,48 +260,20 @@ export function SettingsModal({
                 />
               )}
 
-              {section === "data" && <DataPanel />}
+              {section === "data" && (
+                <DataPrivacyPanel settings={settings} onChange={patchSettings} supabase={supabase} />
+              )}
 
               {section === "privacy" && (
-                <PrivacyPanel
-                  dmPrivacy={dmPrivacy}
-                  onDmPrivacyChange={(value) => {
-                    setDmPrivacy(value);
-                    void persist({ dm_privacy: value }, "Messaging permissions updated.");
-                  }}
-                  messageFilter={messageFilter}
-                  onMessageFilterChange={(value) => {
-                    setMessageFilter(value);
-                    void persist({ message_filter: value }, "Message filter updated.");
-                  }}
-                  notifyFriendRequests={notifyFriends}
-                  onNotifyFriendRequestsChange={(value) => {
-                    setNotifyFriends(value);
-                    void persist({ notify_friend_requests: value });
-                  }}
+                <MessagingPermissionsPanel
+                  settings={settings}
+                  onChange={patchSettings}
+                  supabase={supabase}
                 />
               )}
 
               {section === "notifications" && (
-                <NotificationsPanel
-                  dm={notifyDm}
-                  server={notifyServer}
-                  friends={notifyFriends}
-                  onChange={(patch) => {
-                    if (patch.dm !== undefined) {
-                      setNotifyDm(patch.dm);
-                      void persist({ notify_direct_messages: patch.dm });
-                    }
-                    if (patch.server !== undefined) {
-                      setNotifyServer(patch.server);
-                      void persist({ notify_server_messages: patch.server });
-                    }
-                    if (patch.friends !== undefined) {
-                      setNotifyFriends(patch.friends);
-                      void persist({ notify_friend_requests: patch.friends });
-                    }
-                  }}
-                />
+                <NotificationsPanel settings={settings} onChange={patchSettings} />
               )}
 
               {section === "bt-pro" && <ProPanel />}

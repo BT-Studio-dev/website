@@ -58,9 +58,38 @@ A full-screen modal with a live-filtering search over every section:
 | **Voice & Video** | Input/output device pickers, input/output volume sliders, real microphone test via `getUserMedia` + `AudioContext` |
 | **Accessibility** | Reduced motion, reduced saturation, font scaling |
 | **Authorized Apps** | Connected apps and sessions |
-| **Edit Profiles** | Avatar upload (Supabase Storage `avatars`), display name, bio, custom status + emoji |
+| **Edit Profiles** | Opens the full profile studio (below) |
 
 Every section persists to `profiles` (or `supabase.auth`) and updates live.
+
+### Profile studio (`Edit Profiles`, or click any avatar)
+
+A three-column live editor — every change renders immediately in the centre
+card, and nothing is written until **Save Changes** appears in the bottom bar.
+
+| Column | Contents |
+| --- | --- |
+| **Left — customization** | Profile switcher (**Main Profile** vs per-server overrides), nameplate picker, avatar upload/URL, six animated **avatar decorations**, solid **banner colour**, five **profile effects**, seven **display-name styles** (neon, gradient, sunset, outline, editorial, terminal), and a **Preview BT Pro** toggle that unlocks the two-tone profile theme, banner image/GIF upload and animated avatars |
+| **Centre — live preview** | Banner, decorated avatar with presence dot, floating **custom status speech bubble**, display name with the chosen style/nameplate, `@username`, **pronouns**, **server tag** badge, platform badges, Message / Add Friend actions, bio, **member since**, **connections** (Roblox, TikTok, Twitch, YouTube, GitHub, Spotify, Steam) and the game widgets |
+| **Right — widgets** | **Board / Activity / Wishlist** tabs with **+ Add Widget**: Favorite Game, Games I Like and Want to Play, each searchable against a game catalogue or extended with a custom title |
+
+### Data & Privacy / Messaging Permissions / Notifications
+
+All three sections persist into `profiles.user_settings` (JSONB) the moment a
+toggle or radio changes.
+
+- **Data & Privacy** — data-usage toggles, **Request Data** (downloads a JSON
+  archive of your profile, messages, DMs, friends and blocks), profile-share
+  scope radio group and an "share when I update" toggle.
+- **Messaging Permissions** — sensitive-media dropdowns for friend DMs, stranger
+  DMs and server channels; spam-filter radio group; DM and friend-request
+  toggles; **Allow Friend Requests From** (everyone / friend of friends /
+  server members / nobody); and a searchable **blocked accounts** list with
+  working Unblock buttons backed by the `blocked_users` table.
+- **Notifications** — activity alerts, a reactions dropdown, per-sound toggles
+  with **Preview Sound** buttons (clean Web Audio chimes, no audio assets), a
+  master disable, unread badge, five email categories plus **Unsubscribe from
+  all**, and an expandable **Advanced** panel with `/tts` playback and speed.
 
 ---
 
@@ -93,6 +122,7 @@ handles the OAuth/email-confirmation callback.
 | `server:<serverId>` | `postgres_changes` | `server_members`, `profiles` (presence/name), `voice_states` |
 | `social` | `postgres_changes` | `friendships`, `dm_channels`, `profiles` (presence/name) |
 | `dm:<dmChannelId>` | `postgres_changes` | `direct_messages` INSERT for the open conversation |
+| `social` | `postgres_changes` | `blocked_users` (alongside friendships and dm_channels) |
 
 ### Database schema
 
@@ -113,11 +143,23 @@ friendships     id · requester_id · addressee_id · status (pending|accepted|b
 dm_channels     id · user_a < user_b · pair_key (unique) · created_at · last_message_at
 direct_messages id · dm_channel_id → dm_channels · author_id · content
                 created_at · edited_at · read_at
+blocked_users   (blocker_id, blocked_id) · created_at
 ```
 
+Profile-card columns on `profiles`: `banner_url`, `theme_primary`,
+`theme_secondary`, `avatar_decoration`, `profile_effect`, `name_style`,
+`nameplate`, `pronouns`, `server_tag`, `connections` (JSONB), `widgets` (JSONB),
+`user_settings` (JSONB), `bt_pro`.
+
 RPCs (all `security definer`): `ensure_dm_channel`, `send_friend_request`,
-`respond_friend_request`, `remove_friend`, plus the `is_dm_participant` helper
-used by the DM policies.
+`respond_friend_request`, `remove_friend`, plus the `is_dm_participant`,
+`is_blocked_between`, `is_friend`, `shares_server`, `has_mutual_friend`,
+`can_dm_from` and `can_friend_request_from` helpers.
+
+**Permissions are enforced in Postgres, not the browser.** Triggers on
+`friendships`, `dm_channels` and `direct_messages` evaluate the recipient's
+`user_settings` and reject sends or requests that fall outside their privacy
+scope (SQLSTATE `42501`).
 
 Every table has **row-level security** enabled:
 
@@ -205,7 +247,7 @@ modal (Appearance + Edit Profiles are fully live against local state).
 Run the demo-store logic tests:
 
 ```bash
-node --experimental-strip-types lib/demo.test.mjs
+node --experimental-strip-types lib/demo.test.mjs   # 29 checks
 ```
 
 ---
@@ -226,6 +268,7 @@ components/
   home-sidebar.tsx             "Find or start a conversation" + DM list
   friends-view.tsx             friend tabs, requests, Active Now panel
   dm-view.tsx                  private 1:1 thread
+  profile/                     profile card, Edit Profile studio, widgets
   settings/                    User Settings modal + panels
   server-rail.tsx              server icons + Home button
   message-feed.tsx             realtime feed + composer
@@ -237,6 +280,8 @@ lib/
   appearance.tsx               gradient themes + density/motion context
   queries.ts                   typed data access
   social.ts                    friends, DMs, profile/auth mutations
+  profile-cosmetics.ts         decorations, effects, name styles, games
+  sounds.ts                    Web Audio notification chimes
   demo.ts                      in-memory demo store
   format.ts                    timestamps, markdown tokenizer
 proxy.ts                       cookie-based session gate

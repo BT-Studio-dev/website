@@ -13,12 +13,15 @@ export function DmView({
   profile,
   onSend,
   onDelete,
+  onOpenProfile,
 }: {
   channel: DmChannel;
   messages: DirectMessage[];
   profile: Profile;
   onSend: (content: string) => void;
   onDelete: (id: string) => void;
+  /** Clicking the peer's avatar/name opens their profile card. */
+  onOpenProfile?: (userId: string) => void;
 }) {
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState<string | null>(null);
@@ -57,17 +60,28 @@ export function DmView({
   return (
     <section className="flex min-w-0 flex-1 flex-col bg-panel/25">
       <header className="flex h-12 shrink-0 items-center gap-2.5 border-b border-line/60 px-4">
-        <Avatar
-          name={peerName}
-          src={peer?.avatar_url}
-          accent={peer?.accent_color}
-          size={26}
-          status={(peer?.status as Presence) ?? "offline"}
-        />
+        <button
+          type="button"
+          onClick={() => peer?.id && onOpenProfile?.(peer.id)}
+          aria-label={`Open ${peerName}'s profile`}
+          className="shrink-0 rounded-full transition hover:brightness-110"
+        >
+          <Avatar
+            name={peerName}
+            src={peer?.avatar_url}
+            accent={peer?.accent_color}
+            size={26}
+            status={(peer?.status as Presence) ?? "offline"}
+          />
+        </button>
         <div className="min-w-0">
-          <h2 className="truncate text-[14.5px] font-semibold tracking-tight text-bright">
+          <button
+            type="button"
+            onClick={() => peer?.id && onOpenProfile?.(peer.id)}
+            className="block max-w-full truncate text-left text-[14.5px] font-semibold tracking-tight text-bright hover:underline"
+          >
             {peerName}
-          </h2>
+          </button>
           {peer?.custom_status && (
             <p className="truncate text-[11px] text-dim">{peer.custom_status}</p>
           )}

@@ -2,18 +2,22 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
+  BlockedUser,
   DirectMessage,
   DmChannel,
   FriendRequest,
   Friendship,
   MessageAuthor,
   Profile,
+  ProfileConnection,
+  ProfileWidget,
+  UserSettings,
 } from "@/lib/types";
 import type { FriendRequest as FriendRequestType } from "@/lib/types";
 
 const AUTHOR_FIELDS = "id, username, display_name, avatar_url, accent_color";
 const PROFILE_FIELDS =
-  "id, username, display_name, avatar_url, accent_color, status, bio, custom_status, custom_status_emoji, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests, created_at";
+  "id, username, display_name, avatar_url, accent_color, status, bio, custom_status, custom_status_emoji, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests, banner_url, theme_primary, theme_secondary, avatar_decoration, profile_effect, name_style, nameplate, pronouns, server_tag, connections, widgets, user_settings, bt_pro, created_at";
 
 export { PROFILE_FIELDS };
 export type { FriendRequestType as FriendRequest };
@@ -304,6 +308,19 @@ export type ProfilePatch = Partial<
     | "notify_direct_messages"
     | "notify_server_messages"
     | "notify_friend_requests"
+    | "banner_url"
+    | "theme_primary"
+    | "theme_secondary"
+    | "avatar_decoration"
+    | "profile_effect"
+    | "name_style"
+    | "nameplate"
+    | "pronouns"
+    | "server_tag"
+    | "connections"
+    | "widgets"
+    | "user_settings"
+    | "bt_pro"
   >
 >;
 
@@ -397,4 +414,169 @@ export async function listSessions(supabase: SupabaseClient) {
       current: true,
     },
   ];
+}
+
+/* ---------------------- profile card customization --------------------- */
+
+/** Merge the stored JSONB blob into the profile row so callers see one shape. */
+export function normalizeProfile<T extends Profile | null | undefined>(row: T): T {
+  if (!row) return row;
+  return {
+    ...row,
+    connections: Array.isArray(row.connections) ? row.connections : [],
+    widgets: Array.isArray(row.widgets) ? row.widgets : [],
+    user_settings: row.user_settings ?? {},
+  } as T;
+}
+
+export async function fetchProfileCard(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_FIELDS)
+    .eq("id", userId)
+    .maybeSingle<Profile>();
+  if (error || !data) return null;
+  return normalizeProfile(data);
+}
+
+export async function saveProfileCard(
+  supabase: SupabaseClient,
+  userId: string,
+  patch: {
+    display_name?: string;
+    bio?: string | null;
+    pronouns?: string | null;
+    server_tag?: string | null;
+    avatar_url?: string | null;
+    banner_color?: string;
+    banner_url?: string | null;
+    theme_primary?: string | null;
+    theme_secondary?: string | null;
+    avatar_decoration?: string;
+    profile_effect?: string;
+    name_style?: string;
+    nameplate?: string;
+    connections?: ProfileConnection[];
+    widgets?: ProfileWidget[];
+    custom_status?: string | null;
+    custom_status_emoji?: string | null;
+  },
+) {
+  return updateProfile(supabase, userId, patch as ProfilePatch);
+}
+
+/** Upload a banner image (or animated GIF) into the public `avatars` bucket. */
+export async function uploadBanner(supabase: SupabaseClient, userId: string, file: File) {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  const path = `${userId}/banner-${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("avatars").upload(path, file, {
+    cacheControl: "3600",
+    upsert: true,
+    contentType: file.type,
+  });
+  if (error) return { url: null, error: error.message };
+  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+  return { url: data.publicUrl, error: null };
+}
+
+export async function exportAccountData(supabase: SupabaseClient) {
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id;
+  if (!me) return null;
+
+  const [profile, messages, dms, friendships, blocks] = await Promise.all([
+    supabase.from("profiles").select(PROFILE_FIELDS).eq("id", me).maybeSingle(),
+    supabase
+      .from("messages")
+      .select("id, channel_id, content, created_at, edited_at")
+      .eq("author_id", me)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("direct_messages")
+      .select("id, dm_channel_id, content, created_at")
+      .eq("author_id", me)
+      .order("created_at", { ascending: true }),
+    supabase.from("friendships").select("*").or(`requester_id.eq.${me},addressee_id.eq.${me}`),
+    supabase.from("blocked_users").select("blocked_id, created_at").eq("blocker_id", me),
+  ]);
+
+  return {
+    exported_at: new Date().toISOString(),
+    account: {
+      id: me,
+      email: auth.user?.email ?? null,
+      created_at: auth.user?.created_at ?? null,
+    },
+    profile: profile.data ?? null,
+    messages: messages.data ?? [],
+    direct_messages: dms.data ?? [],
+    friendships: friendships.data ?? [],
+    blocked_users: blocks.data ?? [],
+  };
+}
+
+/* --------------------------- blocked users ---------------------------- */
+
+export async function fetchBlockedUsers(supabase: SupabaseClient): Promise<BlockedUser[]> {
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id;
+  if (!me) return [];
+
+  const { data, error } = await supabase
+    .from("blocked_users")
+    .select(`id:blocked_id, blocked_id, created_at, profile:profiles!blocked_users_blocked_id_fkey(${AUTHOR_FIELDS}, status)`)
+    .eq("blocker_id", me)
+    .order("created_at", { ascending: false });
+
+  if (error || !data) return [];
+  return data as unknown as BlockedUser[];
+}
+
+export async function blockUser(supabase: SupabaseClient, userId: string) {
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id;
+  if (!me || me === userId) return false;
+  const { error } = await supabase
+    .from("blocked_users")
+    .insert({ blocker_id: me, blocked_id: userId });
+  // 23505 = already blocked, which is fine.
+  return !error || error.code === "23505";
+}
+
+export async function unblockUser(supabase: SupabaseClient, userId: string) {
+  const { data: auth } = await supabase.auth.getUser();
+  const me = auth.user?.id;
+  if (!me) return false;
+  const { error } = await supabase
+    .from("blocked_users")
+    .delete()
+    .eq("blocker_id", me)
+    .eq("blocked_id", userId);
+  return !error;
+}
+
+/* ------------------------- user settings blob ------------------------- */
+
+export async function fetchUserSettings(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<UserSettings> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("user_settings")
+    .eq("id", userId)
+    .maybeSingle<{ user_settings: UserSettings | null }>();
+  return data?.user_settings ?? {};
+}
+
+export async function saveUserSettings(
+  supabase: SupabaseClient,
+  userId: string,
+  next: UserSettings,
+) {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ user_settings: next })
+    .eq("id", userId);
+  return { error: error?.message ?? null };
 }
