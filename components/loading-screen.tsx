@@ -64,13 +64,13 @@ export function LoadingScreen({
           <BoltIcon width={26} height={26} strokeWidth={2.2} />
         </span>
 
-        <div className="mt-4 h-6 w-6 animate-spin rounded-full border-2 border-white/15 border-t-blurple" />
+        <div className="mt-4 h-6 w-6 animate-spin rounded-full border-2 border-subtle border-t-blurple" />
 
         <p className="mt-3 text-[10.5px] font-semibold tracking-[0.18em] text-dim uppercase">
           {label}
         </p>
 
-        <div className="mt-8 min-h-[72px] w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur-sm">
+        <div className="mt-8 min-h-[72px] w-full rounded-xl border border-subtle bg-hover/45 px-4 py-3 backdrop-blur-sm">
           <p className="text-[10px] font-bold tracking-[0.16em] text-dim uppercase">Tip</p>
           <p
             key={tip}
@@ -86,7 +86,7 @@ export function LoadingScreen({
             <span
               key={index}
               className={`h-1 rounded-full transition-all ${
-                index === tip ? "w-4 bg-blurple" : "w-1 bg-white/20"
+                index === tip ? "w-4 bg-blurple" : "w-1 bg-hover/55"
               }`}
             />
           ))}

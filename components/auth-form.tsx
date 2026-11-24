@@ -84,10 +84,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
   }
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-void px-6 py-12">
+    <div className="shell-gradient relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-void px-6 py-12">
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="grid-bg absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
-        <div className="absolute top-0 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-blurple/20 blur-[130px]" />
+        <div className="grid-bg absolute inset-0 opacity-45 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+        <div className="ambient-glow absolute -top-24 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 blur-[140px]" />
+        <div className="absolute right-0 bottom-0 h-[22rem] w-[22rem] rounded-full bg-amber/8 blur-[130px]" />
       </div>
 
       <div className="relative w-full max-w-[420px]">
@@ -98,7 +99,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           <span className="text-lg font-semibold tracking-tight">BT Comms</span>
         </Link>
 
-        <div className="rounded-2xl border border-line bg-panel/85 p-7 shadow-2xl shadow-black/50 backdrop-blur-xl">
+        <div className="glass-panel rounded-2xl border border-subtle p-7 shadow-2xl shadow-black/50">
           <h1 className="text-center text-xl font-bold tracking-tight">
             {mode === "login" ? "Welcome back" : "Create your account"}
           </h1>
@@ -112,7 +113,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             {mode === "signup" && (
               <>
                 <Field label="Username">
-                  <div className="flex items-center gap-2 rounded-lg border border-line bg-ink px-3 focus-within:border-blurple/60">
+                  <div className="flex items-center gap-2 rounded-lg border border-subtle bg-input px-3 focus-within:border-blurple/60">
                     <span className="text-muted">@</span>
                     <input
                       value={username}
@@ -122,7 +123,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                       maxLength={24}
                       autoComplete="username"
                       placeholder="ada"
-                      className="w-full bg-transparent py-2.5 text-sm outline-none"
+                      className="w-full bg-transparent py-2.5 text-sm text-bright outline-none placeholder:text-dim"
                     />
                   </div>
                   {usernameError ? (
@@ -141,7 +142,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                     maxLength={40}
                     autoComplete="name"
                     placeholder="Ada Lovelace"
-                    className="w-full rounded-lg border border-line bg-ink px-3 py-2.5 text-sm outline-none focus:border-blurple/60"
+                    className="w-full rounded-lg border border-subtle bg-input px-3 py-2.5 text-sm text-bright outline-none placeholder:text-dim focus:border-blurple/60"
                   />
                 </Field>
 
@@ -175,7 +176,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 required
                 autoComplete="email"
                 placeholder="you@studio.dev"
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2.5 text-sm outline-none focus:border-blurple/60"
+                className="w-full rounded-lg border border-subtle bg-input px-3 py-2.5 text-sm text-bright outline-none placeholder:text-dim focus:border-blurple/60"
               />
             </Field>
 
@@ -191,7 +192,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
                 minLength={6}
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 placeholder="••••••••"
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2.5 text-sm outline-none focus:border-blurple/60"
+                className="w-full rounded-lg border border-subtle bg-input px-3 py-2.5 text-sm text-bright outline-none placeholder:text-dim focus:border-blurple/60"
               />
             </Field>
 
@@ -283,7 +284,7 @@ function Field({
 
 function Spinner() {
   return (
-    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-subtle border-t-white" />
   );
 }
 

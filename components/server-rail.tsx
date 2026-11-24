@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRef, useState } from "react";
 import { CompassIcon, DownloadIcon, PlusIcon } from "@/components/icons";
 import type { Server } from "@/lib/types";
 import { initialsFor } from "@/lib/naming";
@@ -41,7 +42,7 @@ export function ServerRail({
   return (
     <nav
       aria-label="Servers"
-      className="scroll-thin flex w-[72px] shrink-0 flex-col items-center gap-2 overflow-y-auto bg-abyss py-3 app-gradient"
+      className="scrollbar-none flex h-full w-[72px] shrink-0 flex-col items-center gap-2 overflow-y-auto overflow-x-hidden bg-sidebar py-3 app-gradient"
     >
       {/* Home / Direct Messages */}
       <RailItem
@@ -92,7 +93,6 @@ export function ServerRail({
         className="group relative grid h-12 w-12 shrink-0 place-items-center rounded-[24px] border border-dashed border-line text-mint transition-all hover:rounded-[16px] hover:border-mint/70 hover:bg-mint/10"
       >
         <PlusIcon width={20} height={20} />
-        <RailTooltip>Add a Server</RailTooltip>
       </button>
 
       {/* Join a Server */}
@@ -102,12 +102,12 @@ export function ServerRail({
           onClick={onJoinServer}
           title="Join a Server"
           aria-label="Join a Server"
-          className="group relative grid h-9 w-9 shrink-0 place-items-center rounded-[16px] text-[11px] font-bold text-muted transition hover:bg-white/8 hover:text-bright"
+          className="group relative grid h-9 w-9 shrink-0 place-items-center rounded-[16px] text-[11px] font-bold text-muted transition hover:bg-hover/60 hover:text-bright"
         >
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 8l-5 4 5 4M5 12h11" />
           </svg>
-          <RailTooltip>Join a Server</RailTooltip>
+
         </button>
       )}
 
@@ -120,7 +120,6 @@ export function ServerRail({
         className="group relative grid h-12 w-12 shrink-0 place-items-center rounded-[24px] bg-raised text-muted transition-all hover:rounded-[16px] hover:bg-hover hover:text-bright"
       >
         <CompassIcon width={20} height={20} />
-        <RailTooltip>Explore Servers</RailTooltip>
       </button>
 
       {/* Download Apps */}
@@ -133,7 +132,6 @@ export function ServerRail({
         className="group relative grid h-12 w-12 shrink-0 place-items-center rounded-[24px] bg-raised text-mint transition-all hover:rounded-[16px] hover:bg-mint/20"
       >
         <DownloadIcon width={20} height={20} />
-        <RailTooltip>Download Apps</RailTooltip>
       </a>
     </nav>
   );
@@ -159,6 +157,8 @@ function RailItem({
 }) {
   const className =
     "group relative flex h-12 w-full shrink-0 items-center justify-center";
+
+  const { tipTop, bind } = useRailTooltip();
 
   const body = (
     <>
@@ -188,13 +188,19 @@ function RailItem({
           </span>
         )}
       </span>
-      <RailTooltip>{label}</RailTooltip>
+      {tipTop !== null && <RailTooltip top={tipTop}>{label}</RailTooltip>}
     </>
   );
 
   if (href) {
     return (
-      <Link href={href} title={label} aria-current={active ? "page" : undefined} className={className}>
+      <Link
+        href={href}
+        aria-label={label}
+        aria-current={active ? "page" : undefined}
+        className={className}
+        {...bind}
+      >
         {body}
       </Link>
     );
@@ -204,20 +210,48 @@ function RailItem({
     <button
       type="button"
       onClick={onClick}
-      title={label}
+      aria-label={label}
       aria-current={active ? "page" : undefined}
       className={className}
+      {...bind}
     >
       {body}
     </button>
   );
 }
 
-function RailTooltip({ children }: { children: React.ReactNode }) {
+/**
+ * The rail scrolls, which means any absolutely-positioned tooltip gets clipped
+ * by its overflow box. Track the hovered item and paint the label as a fixed
+ * element just outside the rail instead.
+ */
+function useRailTooltip() {
+  const [tipTop, setTipTop] = useState<number | null>(null);
+  const ref = useRef<number>(0);
+
+  const show = (event: React.MouseEvent<HTMLElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    ref.current = rect.top + rect.height / 2;
+    setTipTop(ref.current);
+  };
+
+  return {
+    tipTop,
+    bind: {
+      onMouseEnter: show,
+      onFocus: show as unknown as React.FocusEventHandler<HTMLElement>,
+      onMouseLeave: () => setTipTop(null),
+      onBlur: () => setTipTop(null),
+    },
+  };
+}
+
+function RailTooltip({ top, children }: { top: number; children: React.ReactNode }) {
   return (
     <span
       role="tooltip"
-      className="pointer-events-none absolute left-full z-50 ml-3 hidden whitespace-nowrap rounded-md bg-void px-2.5 py-1.5 text-[12px] font-semibold text-bright opacity-0 shadow-xl transition-opacity group-hover:opacity-100 lg:block"
+      style={{ top }}
+      className="pointer-events-none fixed left-[80px] z-[95] hidden -translate-y-1/2 whitespace-nowrap rounded-md bg-void px-2.5 py-1.5 text-[12px] font-semibold text-bright shadow-xl ring-1 ring-line lg:block"
     >
       {children}
     </span>

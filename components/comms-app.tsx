@@ -102,11 +102,16 @@ export function CommsApp({ initial, onMembersChanged }: { initial: CommsInitial;
   return (
     <AppearanceProvider
       initial={{
-        theme_id: initial.profile.theme_id,
-        message_density: initial.profile.message_density,
-        reduce_motion: initial.profile.reduce_motion,
-        reduced_saturation: initial.profile.reduced_saturation,
-        font_scale: initial.profile.font_scale,
+        // The stored blob wins; the flat legacy columns are the fallback for
+        // rows that predate migration 0007.
+        ...(initial.profile.appearance ?? {}),
+        ...(initial.profile.theme_id ? { theme_id: initial.profile.theme_id } : {}),
+        ...(initial.profile.message_density ? { message_density: initial.profile.message_density } : {}),
+        ...(initial.profile.reduce_motion !== undefined ? { reduce_motion: initial.profile.reduce_motion } : {}),
+        ...(initial.profile.reduced_saturation !== undefined
+          ? { reduced_saturation: initial.profile.reduced_saturation }
+          : {}),
+        ...(initial.profile.font_scale ? { font_scale: initial.profile.font_scale } : {}),
       }}
     >
       <CommsShell initial={initial} onMembersChanged={onMembersChanged} />
@@ -219,11 +224,15 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     persistedAppearance.current = key;
     const timeout = setTimeout(() => {
       void updateProfile(supabase, profile.id, {
+        // Flat columns stay in sync for anything that reads them directly…
         theme_id: appearance.theme_id,
         message_density: appearance.message_density,
         reduce_motion: appearance.reduce_motion,
         reduced_saturation: appearance.reduced_saturation,
         font_scale: appearance.font_scale,
+        // …and the full blob carries the gradient + icon pack + streamer flags
+        // so switching devices doesn't reset them.
+        appearance,
       });
     }, 600);
     return () => clearTimeout(timeout);
@@ -524,20 +533,32 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   }, [supabase, profile.id, flash]);
 
   /* ------------------------------- actions -------------------------------- */
+  /** Look up the server we just created (newest owned row with this name). */
+  async function findOwnedServer(name: string): Promise<Server | null> {
+    const { data } = await supabase
+      .from("servers")
+      .select("id, name, icon, description, invite_code, is_default, owner_id")
+      .eq("owner_id", profile.id)
+      .eq("name", name)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const rows = (data ?? []) as Server[];
+    return rows[0] ?? null;
+  }
+
   async function createServer() {
     const name = serverName.trim();
     if (!name) return;
     setBusy(true);
     setFormError(null);
 
-    const { data: created, error } = await supabase
+    const { error } = await supabase
       .from("servers")
-      .insert({ name, icon: serverIcon, owner_id: profile.id })
-      .select("id, name, icon, description, invite_code, is_default, owner_id")
-      .single<Server>();
+      .insert({ name, icon: serverIcon, owner_id: profile.id });
 
+    const created = error ? null : await findOwnedServer(name);
     if (error || !created) {
-      setFormError(error?.message ?? "Could not create the server.");
+      setFormError(error?.message ?? "Could not create the server. Try a different name.");
       setBusy(false);
       return;
     }
@@ -919,14 +940,17 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     setBusy(true);
     setFormError(null);
 
-    const { data: created, error } = await supabase
+    // Insert without RETURNING: the SELECT policy on `servers` checks membership,
+    // which doesn't exist yet at that instant. The RLS fix (0006) allows owners to
+    // read their own servers, but we still look the row up explicitly afterwards
+    // so the flow works against an un-migrated database too.
+    const { error } = await supabase
       .from("servers")
-      .insert({ name, icon: serverIcon, owner_id: profile.id })
-      .select("id, name, icon, description, invite_code, is_default, owner_id")
-      .single<Server>();
+      .insert({ name, icon: serverIcon, owner_id: profile.id });
 
+    const created = error ? null : await findOwnedServer(name);
     if (error || !created) {
-      setFormError(error?.message ?? "Could not create the server.");
+      setFormError(error?.message ?? "Could not create the server. Try a different name.");
       setBusy(false);
       return;
     }
@@ -1026,7 +1050,10 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     : activeDm?.peer?.display_name ?? activeDm?.peer?.username ?? null;
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-void" data-theme-surface>
+    <div
+      className="shell-gradient flex h-dvh w-screen overflow-hidden overflow-x-hidden bg-void"
+      data-theme-surface
+    >
       <ViewTitle
         view={
           onboardingServerId && onboardingServerId === activeServerId
@@ -1621,7 +1648,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-medium transition ${
                   channelKind === kind
                     ? "border-blurple/60 bg-blurple/15 text-bright"
-                    : "border-line bg-ink text-muted hover:bg-hover/60"
+                    : "border-line bg-input text-muted hover:bg-hover/60"
                 }`}
               >
                 {kind === "text" ? <HashIcon width={14} height={14} /> : <SpeakerIcon width={14} height={14} />}
@@ -1636,7 +1663,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               onChange={(e) => setChannelName(e.target.value)}
               maxLength={40}
               placeholder={channelKind === "text" ? "design-review" : "Design Voice"}
-              className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-blurple/60"
+              className="w-full rounded-lg border border-line bg-input px-3 py-2 text-sm text-bright outline-none focus:border-blurple/60"
             />
           </label>
           {channelKind === "text" && (
@@ -1649,7 +1676,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 onChange={(e) => setChannelTopic(e.target.value)}
                 maxLength={120}
                 placeholder="What is this channel about?"
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-blurple/60"
+                className="w-full rounded-lg border border-line bg-input px-3 py-2 text-sm text-bright outline-none focus:border-blurple/60"
               />
             </label>
           )}
@@ -1665,7 +1692,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         onClose={() => setDialog(null)}
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2 rounded-lg border border-line bg-ink px-2.5 py-1.5">
+          <div className="flex items-center gap-2 rounded-lg border border-line bg-input px-2.5 py-1.5">
             <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-muted">
               btcomms.gg/invite/{server?.invite_code}
             </code>
@@ -1689,7 +1716,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 value={joiningCode}
                 onChange={(e) => setJoiningCode(e.target.value)}
                 placeholder="bt-comms"
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2 font-mono text-[12.5px] outline-none focus:border-blurple/60"
+                className="w-full rounded-lg border border-line bg-input px-3 py-2 font-mono text-[12.5px] text-bright outline-none focus:border-blurple/60"
               />
               <button
                 onClick={() => void joinWithInvite(joiningCode)}
@@ -1715,7 +1742,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           {discover.map((candidate) => {
             const already = servers.some((s) => s.id === candidate.id);
             return (
-              <li key={candidate.id} className="flex items-center gap-3 rounded-xl border border-line bg-ink/60 p-3">
+              <li key={candidate.id} className="flex items-center gap-3 rounded-xl border border-line bg-input/60 p-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-raised text-lg">{candidate.icon}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13.5px] font-semibold">{candidate.name}</p>
@@ -1753,11 +1780,11 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
 
 function StoreView() {
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-panel/25">
+    <section className="flex min-w-0 flex-1 flex-col bg-surface/25">
       <header className="flex h-12 shrink-0 items-center border-b border-line/60 px-4">
         <h2 className="text-[15px] font-bold tracking-tight text-bright">Store</h2>
       </header>
-      <div className="scroll-thin flex-1 overflow-y-auto p-6">
+      <div className="scroll-auto flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl">
           <h3 className="text-xl font-bold tracking-tight text-bright">Perks & cosmetics</h3>
           <p className="mt-1 text-[13px] text-muted">
@@ -1792,11 +1819,11 @@ function DiscoverView({
   onOpen: (id: string) => void;
 }) {
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-panel/25">
+    <section className="flex min-w-0 flex-1 flex-col bg-surface/25">
       <header className="flex h-12 shrink-0 items-center border-b border-line/60 px-4">
         <h2 className="text-[15px] font-bold tracking-tight text-bright">Discover</h2>
       </header>
-      <div className="scroll-thin flex-1 overflow-y-auto p-6">
+      <div className="scroll-auto flex-1 overflow-y-auto p-6">
         <h3 className="text-xl font-bold tracking-tight text-bright">Find your community</h3>
         <p className="mt-1 text-[13px] text-muted">
           From gaming to design, there&apos;s a place for you.

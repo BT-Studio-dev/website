@@ -100,28 +100,58 @@ export function FriendsView({
   return (
     <section className="ambient-stage flex min-w-0 flex-1 flex-col">
       {/*
-        Header is a two-row grid below `md` so the tablist can never push the
-        search box out of view or create a horizontal scrollbar.
+        Single flex row: title on the left, tabs + search grouped on the right.
+        `flex-wrap` + `min-w-0` everywhere means the tabs scroll inside their
+        own box below `sm` and never widen the header into the chat pane.
       */}
-      <header className="glass-bar grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 border-b px-3 py-1.5 md:flex md:h-12 md:gap-2 md:px-4 md:py-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <FriendsIcon width={20} height={20} className="hidden shrink-0 text-muted md:block" />
-          <h2 className="shrink-0 text-[15px] font-bold tracking-tight text-bright">Friends</h2>
-          <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-line md:block" />
+      <header className="glass-bar flex h-12 shrink-0 flex-nowrap items-center justify-between gap-2 overflow-hidden border-b px-3 sm:gap-3 sm:px-4">
+        <div className="flex min-w-0 shrink-0 items-center gap-2">
+          <FriendsIcon width={20} height={20} className="hidden shrink-0 text-muted sm:block" />
+          <h2 className="truncate text-[15px] font-bold tracking-tight text-bright">Friends</h2>
+          <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-line sm:block" />
         </div>
 
-        <div className="hidden min-w-[120px] max-w-[220px] items-center gap-1.5 rounded-md bg-void/60 px-2.5 py-1.5 ring-1 ring-line/70 focus-within:ring-blurple/50 md:order-last md:ml-auto md:flex">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search"
-            aria-label="Search friends"
-            className="w-full min-w-0 bg-transparent text-[12.5px] outline-none placeholder:text-dim"
-          />
-          <SearchIcon width={13} height={13} className="shrink-0 text-dim" />
-        </div>
-        <div className="col-span-2 flex items-center gap-1.5 md:hidden">
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md bg-void/60 px-2.5 py-1 ring-1 ring-line/70 focus-within:ring-blurple/50">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <nav
+            role="tablist"
+            aria-label="Friend filters"
+            className="scrollbar-none -mx-1 flex min-w-0 items-center gap-0.5 overflow-x-auto px-1"
+          >
+            {FILTERS.map((item) => (
+              <button
+                key={item.id}
+                role="tab"
+                aria-selected={filter === item.id}
+                onClick={() => setFilter(item.id)}
+                className={`shrink-0 rounded-md px-2 py-1 text-[13px] font-medium whitespace-nowrap transition sm:px-2.5 ${
+                  filter === item.id
+                    ? "bg-hover text-bright"
+                    : "text-muted hover:bg-hover/50 hover:text-bright"
+                }`}
+              >
+                {item.label}
+                {item.id === "pending" && pendingTotal > 0 && (
+                  <span className="ml-1.5 rounded-full bg-rose px-1.5 text-[10px] font-bold text-white">
+                    {pendingTotal}
+                  </span>
+                )}
+              </button>
+            ))}
+            <button
+              onClick={() => setFilter("add")}
+              aria-selected={filter === "add"}
+              role="tab"
+              className={`ml-0.5 shrink-0 rounded-md px-2 py-1 text-[13px] font-semibold whitespace-nowrap transition sm:px-2.5 ${
+                filter === "add"
+                  ? "bg-mint text-white"
+                  : "bg-mint/15 text-mint hover:bg-mint/25"
+              }`}
+            >
+              Add Friend
+            </button>
+          </nav>
+
+          <div className="flex w-[92px] shrink-0 items-center gap-1.5 rounded-md bg-void/60 px-2 py-1.5 ring-1 ring-line/70 focus-within:ring-blurple/50 sm:w-[140px] sm:px-2.5 lg:w-[200px]">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -132,48 +162,9 @@ export function FriendsView({
             <SearchIcon width={13} height={13} className="shrink-0 text-dim" />
           </div>
         </div>
-
-        <nav
-          role="tablist"
-          aria-label="Friend filters"
-          className="scroll-thin col-span-2 flex min-w-0 items-center gap-0.5 overflow-x-auto md:col-span-1 md:overflow-visible"
-        >
-          {FILTERS.map((item) => (
-            <button
-              key={item.id}
-              role="tab"
-              aria-selected={filter === item.id}
-              onClick={() => setFilter(item.id)}
-              className={`shrink-0 rounded-md px-2 py-1 text-[13px] font-medium whitespace-nowrap transition sm:px-2.5 sm:text-[13.5px] ${
-                filter === item.id
-                  ? "bg-hover text-bright"
-                  : "text-muted hover:bg-hover/50 hover:text-bright"
-              }`}
-            >
-              {item.label}
-              {item.id === "pending" && pendingTotal > 0 && (
-                <span className="ml-1.5 rounded-full bg-rose px-1.5 text-[10px] font-bold text-white">
-                  {pendingTotal}
-                </span>
-              )}
-            </button>
-          ))}
-          <button
-            onClick={() => setFilter("add")}
-            aria-selected={filter === "add"}
-            role="tab"
-            className={`ml-0.5 shrink-0 rounded-md px-2 py-1 text-[13px] font-semibold whitespace-nowrap transition sm:px-2.5 sm:text-[13.5px] ${
-              filter === "add"
-                ? "bg-mint text-white"
-                : "bg-mint/15 text-mint hover:bg-mint/25"
-            }`}
-          >
-            Add Friend
-          </button>
-        </nav>
       </header>
 
-      <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-4">
+      <div className="scroll-auto min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-4">
         {filter === "add" ? (
           <div className="max-w-lg">
             <h3 className="text-[15px] font-bold tracking-tight text-bright">ADD FRIEND</h3>
@@ -216,7 +207,7 @@ export function FriendsView({
                     rows={2}
                     maxLength={120}
                     placeholder="Say hi! Let them know who you are."
-                    className="scroll-thin w-full resize-none bg-transparent px-3 pt-2 text-[13px] leading-relaxed outline-none placeholder:text-dim"
+                    className="scroll-auto w-full resize-none bg-transparent px-3 pt-2 text-[13px] leading-relaxed outline-none placeholder:text-dim"
                   />
                   <p className="px-3 pb-1.5 text-right text-[10.5px] tabular-nums text-dim">
                     {addNote.length}/120
@@ -244,7 +235,7 @@ export function FriendsView({
               <button
                 type="button"
                 onClick={onExploreServers}
-                className="mt-2 flex w-full items-center gap-3 rounded-xl border border-line/70 bg-ink/50 p-3 text-left transition hover:border-blurple/50 hover:bg-hover/40"
+                className="mt-2 flex w-full items-center gap-3 rounded-xl border border-line/70 bg-input/50 p-3 text-left transition hover:border-blurple/50 hover:bg-hover/40"
               >
                 <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blurple/70 to-blurple-soft/60 text-white">
                   <CompassIcon width={20} height={20} />
@@ -530,12 +521,12 @@ export function ActiveNowPanel({
   onOpenDm: (userId: string) => void;
 }) {
   return (
-    <aside className="hidden w-[340px] shrink-0 flex-col border-l border-line/60 bg-panel/20 xl:flex">
+    <aside className="hidden w-[340px] shrink-0 flex-col border-l border-line/60 bg-surface/20 xl:flex">
       <header className="flex h-12 shrink-0 items-center border-b border-line/60 px-4">
         <h3 className="text-[15px] font-bold tracking-tight text-bright">Active Now</h3>
       </header>
 
-      <div className="scroll-thin min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="scroll-auto min-h-0 flex-1 overflow-y-auto p-3">
         {entries.length === 0 ? (
           <div className="mt-8 px-4 text-center">
             <p className="text-[14px] font-semibold text-bright">It&apos;s quiet for now…</p>

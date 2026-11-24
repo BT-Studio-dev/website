@@ -51,13 +51,13 @@ const stats = [
 
 export default function LandingPage() {
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-void">
+    <div className="shell-gradient relative min-h-dvh overflow-x-hidden bg-void">
       {/* ambient background */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="grid-bg absolute inset-0 opacity-60 [mask-image:radial-gradient(ellipse_at_top,black,transparent_72%)]" />
-        <div className="absolute -top-40 left-1/2 h-[40rem] w-[40rem] -translate-x-1/2 rounded-full bg-blurple/25 blur-[140px]" />
-        <div className="absolute top-1/3 -left-40 h-[26rem] w-[26rem] rounded-full bg-[#eb459e]/12 blur-[130px]" />
-        <div className="absolute right-0 bottom-0 h-[26rem] w-[26rem] rounded-full bg-[#00a8fc]/10 blur-[130px]" />
+        <div className="grid-bg absolute inset-0 opacity-50 [mask-image:radial-gradient(ellipse_at_top,black,transparent_72%)]" />
+        <div className="ambient-glow absolute -top-40 left-1/2 h-[40rem] w-[40rem] -translate-x-1/2 blur-[150px]" />
+        <div className="absolute top-1/3 -left-40 h-[26rem] w-[26rem] rounded-full bg-amber/10 blur-[130px]" />
+        <div className="absolute right-0 bottom-0 h-[26rem] w-[26rem] rounded-full bg-blurple/12 blur-[130px]" />
       </div>
 
       <header className="relative z-10 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
@@ -67,7 +67,7 @@ export default function LandingPage() {
           </span>
           <span className="text-[15px] font-semibold tracking-tight">
             BT Comms
-            <span className="ml-2 hidden rounded-full border border-line bg-panel/70 px-2 py-0.5 text-[10px] font-medium tracking-wider text-muted uppercase sm:inline">
+            <span className="ml-2 hidden rounded-full border border-subtle bg-elevated/60 px-2 py-0.5 text-[10px] font-medium tracking-wider text-muted uppercase sm:inline">
               by BT Studio
             </span>
           </span>
@@ -91,7 +91,7 @@ export default function LandingPage() {
 
       <main className="relative z-10 mx-auto w-full max-w-6xl px-6">
         <section className="pt-16 pb-20 text-center sm:pt-24">
-          <p className="animate-fade mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-line bg-panel/70 px-3.5 py-1.5 text-xs font-medium text-muted">
+          <p className="animate-fade mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-subtle bg-elevated/60 px-3.5 py-1.5 text-xs font-medium text-muted">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-mint opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-mint" />
@@ -101,7 +101,7 @@ export default function LandingPage() {
 
           <h1 className="text-balance mx-auto max-w-3xl text-5xl leading-[1.05] font-bold tracking-tight sm:text-6xl md:text-7xl">
             Your team&apos;s place to{" "}
-            <span className="bg-gradient-to-r from-blurple-soft via-[#a78bfa] to-[#00a8fc] bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blurple-soft via-amber to-[#00a8fc] bg-clip-text text-transparent">
               talk, hang out, and ship
             </span>
           </h1>
@@ -114,9 +114,9 @@ export default function LandingPage() {
 
           <LandingCta />
 
-          <dl className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line/60 sm:grid-cols-4">
+          <dl className="mx-auto mt-16 grid max-w-3xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-subtle bg-line/60 sm:grid-cols-4">
             {stats.map((stat) => (
-              <div key={stat.label} className="bg-abyss/80 px-4 py-5">
+              <div key={stat.label} className="bg-sidebar/80 px-4 py-5">
                 <dd className="text-lg font-semibold tracking-tight text-bright">
                   {stat.value}
                 </dd>
@@ -130,19 +130,19 @@ export default function LandingPage() {
 
         {/* App preview */}
         <section aria-label="Product preview" className="pb-24">
-          <div className="animate-rise overflow-hidden rounded-2xl border border-line bg-abyss shadow-2xl shadow-black/60">
-            <div className="flex items-center gap-2 border-b border-line bg-panel px-4 py-3">
+          <div className="animate-rise glass-panel overflow-hidden rounded-2xl border border-subtle shadow-2xl shadow-black/50">
+            <div className="flex items-center gap-2 border-b border-subtle bg-elevated/70 px-4 py-3">
               <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
               <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-              <span className="ml-3 rounded-md bg-ink px-2.5 py-1 text-[11px] text-dim">
+              <span className="ml-3 rounded-md bg-input px-2.5 py-1 text-[11px] text-dim">
                 btcomms.gg/channels
               </span>
             </div>
 
             <div className="grid grid-cols-[56px_1fr] sm:grid-cols-[64px_190px_1fr] md:grid-cols-[64px_200px_1fr_180px]">
               {/* server rail */}
-              <div className="flex flex-col items-center gap-3 border-r border-line bg-void py-4">
+              <div className="flex flex-col items-center gap-3 border-r border-subtle bg-void py-4">
                 <div className="grid h-9 w-9 place-items-center rounded-2xl bg-blurple text-xs font-bold text-white">
                   BT
                 </div>
@@ -154,13 +154,13 @@ export default function LandingPage() {
                     {emoji}
                   </div>
                 ))}
-                <div className="grid h-9 w-9 place-items-center rounded-2xl border border-dashed border-line text-mint">
+                <div className="grid h-9 w-9 place-items-center rounded-2xl border border-dashed border-subtle text-mint">
                   +
                 </div>
               </div>
 
               {/* channels */}
-              <div className="hidden flex-col border-r border-line bg-ink py-3 sm:flex">
+              <div className="hidden flex-col border-r border-subtle bg-surface/60 py-3 sm:flex">
                 <div className="px-3 pb-3 text-[11px] font-semibold tracking-widest text-dim uppercase">
                   Text Channels
                 </div>
@@ -190,7 +190,7 @@ export default function LandingPage() {
               </div>
 
               {/* messages */}
-              <div className="flex min-h-[300px] flex-col justify-end gap-4 bg-panel/40 p-4">
+              <div className="flex min-h-[300px] flex-col justify-end gap-4 bg-elevated/25 p-4">
                 <div className="flex gap-2.5">
                   <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#5865f2] to-[#8b5cf6] text-[11px] font-bold">
                     BT
@@ -229,7 +229,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="mt-1 flex items-center gap-2 rounded-lg border border-line bg-ink px-3 py-2">
+                <div className="mt-1 flex items-center gap-2 rounded-lg border border-subtle bg-input px-3 py-2">
                   <PlusIconMock />
                   <span className="text-[13px] text-dim">
                     Message #general
@@ -241,7 +241,7 @@ export default function LandingPage() {
               </div>
 
               {/* members */}
-              <div className="hidden flex-col border-l border-line bg-ink px-3 py-4 md:flex">
+              <div className="hidden flex-col border-l border-subtle bg-input px-3 py-4 md:flex">
                 <div className="mb-3 text-[11px] font-semibold tracking-widest text-dim uppercase">
                   Online — 3
                 </div>
@@ -287,7 +287,7 @@ export default function LandingPage() {
             {features.map(({ icon: Icon, title, body }) => (
               <div
                 key={title}
-                className="group rounded-xl border border-line bg-panel/60 p-5 transition hover:-translate-y-0.5 hover:border-blurple/40 hover:bg-panel"
+                className="group rounded-xl border border-subtle bg-elevated/60 p-5 transition hover:-translate-y-0.5 hover:border-blurple/40 hover:bg-elevated"
               >
                 <span className="mb-4 grid h-9 w-9 place-items-center rounded-lg bg-blurple/15 text-blurple-soft transition group-hover:bg-blurple/25">
                   <Icon width={18} height={18} />

@@ -18,9 +18,33 @@ export type ThemeDefinition = {
   ambient?: [string, string, string];
   vars: Record<string, string>;
   dark: boolean;
+  /**
+   * True for the 2026 gradient shells. Ambient themes paint the light pools
+   * and raise the glass opacity so the wash bleeds through every pane.
+   */
+  ambientShell: boolean;
 };
 
+/**
+ * Semantic surface tokens. These are what components should reference:
+ * `--bg-sidebar`, `--bg-surface`, `--bg-elevated`, `--bg-input`,
+ * `--border-subtle`, `--text-primary`, `--text-muted`.
+ *
+ * They are aliases onto the raw palette, so overriding the palette is still
+ * enough to re-tint the whole app.
+ */
+const aliases = (): Record<string, string> => ({
+  "--bg-sidebar": "var(--c-abyss)",
+  "--bg-surface": "var(--c-ink)",
+  "--bg-elevated": "var(--c-panel)",
+  "--bg-input": "var(--c-void)",
+  "--border-subtle": "var(--c-line)",
+  "--text-primary": "var(--c-bright)",
+  "--text-muted": "var(--c-muted)",
+});
+
 const base = (overrides: Record<string, string> = {}) => ({
+  ...aliases(),
   "--c-void": "#05060a",
   "--c-abyss": "#090b11",
   "--c-ink": "#0d1018",
@@ -43,11 +67,12 @@ const base = (overrides: Record<string, string> = {}) => ({
 export const THEMES: ThemeDefinition[] = [
   {
     id: "midnight",
-    name: "Midnight Blurple",
+    name: "Midnight Aurora",
     description: "The classic. Deep navy-to-black with blurple accents.",
     gradient: ["#1b2140", "#07080d"],
     ambient: ["rgba(88,101,242,0.42)", "rgba(56,189,248,0.20)", "rgba(15,23,42,0.9)"],
     dark: true,
+    ambientShell: false,
     vars: base({
       "--c-void": "#05060b",
       "--c-abyss": "#080a12",
@@ -63,11 +88,12 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: "amethyst",
-    name: "Amethyst Dusk",
+    name: "Amethyst Twilight",
     description: "Deep purple fading into slate — the flagship gradient.",
     gradient: ["#2e1b4e", "#14121c"],
     ambient: ["rgba(168,85,247,0.40)", "rgba(251,146,60,0.16)", "rgba(24,16,40,0.9)"],
     dark: true,
+    ambientShell: true,
     vars: base({
       "--c-void": "#0b0715",
       "--c-abyss": "#100b1d",
@@ -90,6 +116,7 @@ export const THEMES: ThemeDefinition[] = [
     gradient: ["#0c3b45", "#06121a"],
     ambient: ["rgba(6,182,212,0.38)", "rgba(45,212,191,0.18)", "rgba(4,20,28,0.92)"],
     dark: true,
+    ambientShell: true,
     vars: base({
       "--c-void": "#04090d",
       "--c-abyss": "#061117",
@@ -107,11 +134,12 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: "ember",
-    name: "Ember Sunset",
-    description: "Warm rose and amber on charcoal.",
+    name: "Crimson Sunset",
+    description: "Crimson rose fading into ember amber on charcoal.",
     gradient: ["#4a1d2b", "#150a0d"],
     ambient: ["rgba(244,63,94,0.38)", "rgba(250,166,26,0.22)", "rgba(28,12,16,0.92)"],
     dark: true,
+    ambientShell: true,
     vars: base({
       "--c-void": "#0c0507",
       "--c-abyss": "#12080b",
@@ -134,6 +162,7 @@ export const THEMES: ThemeDefinition[] = [
     gradient: ["#123222", "#070f0b"],
     ambient: ["rgba(34,197,94,0.34)", "rgba(20,184,166,0.16)", "rgba(6,18,12,0.92)"],
     dark: true,
+    ambientShell: true,
     vars: base({
       "--c-void": "#040a06",
       "--c-abyss": "#07100a",
@@ -156,6 +185,7 @@ export const THEMES: ThemeDefinition[] = [
     gradient: ["#2b2d31", "#0a0b0d"],
     ambient: ["rgba(148,163,184,0.22)", "rgba(100,116,139,0.12)", "rgba(10,11,13,0.94)"],
     dark: true,
+    ambientShell: false,
     vars: base({
       "--c-void": "#050506",
       "--c-abyss": "#0a0a0c",
@@ -173,11 +203,12 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: "ambient",
-    name: "Amber Dusk",
-    description: "Default 2026 look — deep purple melts into warm amber behind glass.",
+    name: "Deep Purple → Amber",
+    description: "The 2026 default — deep purple melts into warm amber behind glass.",
     gradient: ["#3b1d63", "#1a0f26"],
     ambient: ["rgba(139,92,246,0.46)", "rgba(251,146,60,0.26)", "rgba(26,15,38,0.94)"],
     dark: true,
+    ambientShell: true,
     vars: base({
       "--c-void": "#120a1c",
       "--c-abyss": "#170e24",
@@ -197,11 +228,12 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: "charcoal",
-    name: "Charcoal Slate",
-    description: "Discord's modern charcoal — neutral, low-noise, high contrast.",
+    name: "Cyber Dusk",
+    description: "Cool graphite with an electric indigo rim. Low-noise, high contrast.",
     gradient: ["#2b2d31", "#111214"],
     ambient: ["rgba(99,102,241,0.20)", "rgba(148,163,184,0.12)", "rgba(10,11,13,0.94)"],
     dark: true,
+    ambientShell: false,
     vars: base({
       "--c-void": "#0b0c0e",
       "--c-abyss": "#111214",
@@ -224,6 +256,7 @@ export const THEMES: ThemeDefinition[] = [
     gradient: ["#6d28d9", "#0ea5e9"],
     ambient: ["rgba(109,40,217,0.44)", "rgba(14,165,233,0.24)", "rgba(16,12,26,0.93)"],
     dark: true,
+    ambientShell: true,
     vars: base({
       "--c-void": "#0f0a1a",
       "--c-abyss": "#140d22",
@@ -241,12 +274,22 @@ export const THEMES: ThemeDefinition[] = [
   },
   {
     id: "light",
-    name: "Daylight",
+    name: "Light",
     description: "The light counterpart, tuned for readability.",
     gradient: ["#eef1fb", "#ffffff"],
     ambient: ["rgba(168,85,247,0.16)", "rgba(251,191,36,0.14)", "rgba(255,255,255,0.0)"],
     dark: false,
+    ambientShell: false,
     vars: {
+      ...aliases(),
+      /* Light needs explicit surfaces — the palette alone reads as grey. */
+      "--bg-sidebar": "#f4f6fc",
+      "--bg-surface": "#ffffff",
+      "--bg-elevated": "#ffffff",
+      "--bg-input": "#ffffff",
+      "--border-subtle": "#d8deec",
+      "--text-primary": "#11141c",
+      "--text-muted": "#5a6478",
       "--c-void": "#e6e9f2",
       "--c-abyss": "#f2f4fa",
       "--c-ink": "#fbfcff",
@@ -266,6 +309,25 @@ export const THEMES: ThemeDefinition[] = [
     },
   },
 ];
+
+/**
+ * The semantic surface tokens every theme must define. Components reference
+ * these instead of hardcoded greys so a theme swap re-tints the whole shell.
+ */
+export const SURFACE_TOKENS = [
+  "--bg-sidebar",
+  "--bg-surface",
+  "--bg-elevated",
+  "--bg-input",
+  "--border-subtle",
+  "--text-primary",
+  "--text-muted",
+] as const;
+
+/** Themes that paint the 2026 ambient gradient shell. */
+export function ambientThemeIds(): ThemeId[] {
+  return THEMES.filter((t) => t.ambientShell).map((t) => t.id);
+}
 
 export const DEFAULT_APPEARANCE: Appearance = {
   theme_id: "ambient",

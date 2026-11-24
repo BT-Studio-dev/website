@@ -64,7 +64,7 @@ export function WidgetPanel({
   }
 
   return (
-    <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-line/80 bg-panel/70 xl:w-[336px]">
+    <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-line/80 bg-elevated/60 xl:w-[336px]">
       <header className="flex shrink-0 items-center justify-between gap-2 border-b border-line/60 px-3 py-2.5">
         <div className="flex items-center gap-1">
           {TABS.map((item) => (
@@ -95,7 +95,7 @@ export function WidgetPanel({
         </button>
       </header>
 
-      <div className="scroll-thin min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
+      <div className="scroll-auto min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
         {activeTab.kinds.map((kind) => {
           const owned = widgets.filter((w) => w.kind === kind);
           return (

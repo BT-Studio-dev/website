@@ -36,7 +36,7 @@ export function StatusPicker({
             onClick={() => setOpen((v) => !v)}
             aria-haspopup="menu"
             aria-expanded={open}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] font-semibold text-bright transition hover:bg-white/8"
+            className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] font-semibold text-bright transition hover:bg-hover/60"
           >
             <StatusIcon status={status} />
             {statusLabel(status)}
@@ -77,7 +77,7 @@ export function StatusPicker({
             </button>
 
             {option.timed && durationFor === option.id && (
-              <div className="animate-rise absolute top-0 left-full z-10 ml-1 w-[152px] rounded-md border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+              <div className="animate-rise absolute top-0 left-full z-10 ml-1 w-[152px] rounded-md border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
                 {STATUS_DURATIONS.map((duration) => (
                   <button
                     key={duration.id}

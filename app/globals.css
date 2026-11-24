@@ -14,6 +14,15 @@
   --color-dim: var(--c-dim);
   --color-bright: var(--c-bright);
 
+  /* Semantic surface tokens — prefer these over raw palette steps.
+     They resolve per-theme (see `:root` below) and stay themeable. */
+  --color-sidebar: var(--bg-sidebar);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-input: var(--bg-input);
+  --color-subtle: var(--border-subtle);
+  --color-strong: var(--text-primary);
+
   --color-blurple: var(--c-accent);
   --color-blurple-soft: var(--c-accent-soft);
   --color-mint: var(--c-mint);
@@ -45,6 +54,46 @@
   --c-glow: 168, 85, 247;
   --font-scale: 1;
   --density-gap: 1;
+
+  /* ---- Semantic theme tokens -------------------------------------- */
+  /* One indirection layer: components ask for `--bg-surface`, never for a
+     hardcoded grey. The provider rewrites these on <html> when the user
+     picks a theme, so every pane re-tints at once. */
+  --bg-sidebar: var(--c-abyss);
+  --bg-surface: var(--c-ink);
+  --bg-elevated: var(--c-panel);
+  --bg-input: var(--c-void);
+  --border-subtle: var(--c-line);
+  --text-primary: var(--c-bright);
+  --text-muted: var(--c-muted);
+
+  /* Full-app wash. Ambient themes layer light pools on top of this. */
+  --bg-app-gradient: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--c-accent) 14%, var(--c-void)) 0%,
+    var(--c-void) 55%,
+    var(--c-abyss) 100%
+  );
+
+  /* Glass opacity knobs — raised for ambient themes so the gradient bleeds. */
+  --glass-sidebar: 0.72;
+  --glass-bar: 0.66;
+  --glass-blur: 18px;
+  --surface-noise: 0;
+}
+
+/* Ambient (2026 gradient) themes opt into stronger glass + a visible wash. */
+:root[data-ambient="true"] {
+  --glass-sidebar: 0.52;
+  --glass-bar: 0.46;
+  --glass-blur: 26px;
+  --surface-noise: 0.5;
+}
+
+:root[data-theme="light"] {
+  --glass-sidebar: 0.82;
+  --glass-bar: 0.82;
+  --surface-noise: 0;
 }
 
 @layer base {
@@ -59,12 +108,16 @@
 
   body {
     background-color: var(--c-void);
-    color: var(--c-bright);
+    background-image: var(--bg-app-gradient);
+    background-attachment: fixed;
+    color: var(--text-primary);
     font-family: var(--font-sans);
     font-size: calc(1rem * var(--font-scale));
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     overscroll-behavior: none;
+    /* Never let a stray wide child introduce a document scrollbar. */
+    overflow-x: hidden;
   }
 
   ::selection {
@@ -95,9 +148,10 @@
 }
 
 @layer utilities {
+  /* Thin, low-contrast scrollbars that fade out until you hover the pane. */
   .scroll-thin {
     scrollbar-width: thin;
-    scrollbar-color: color-mix(in oklab, var(--c-bright) 16%, transparent) transparent;
+    scrollbar-color: color-mix(in oklab, var(--text-primary) 14%, transparent) transparent;
   }
   .scroll-thin::-webkit-scrollbar {
     width: 8px;
@@ -107,20 +161,71 @@
     background: transparent;
   }
   .scroll-thin::-webkit-scrollbar-thumb {
-    background-color: color-mix(in oklab, var(--c-bright) 16%, transparent);
+    background-color: color-mix(in oklab, var(--text-primary) 14%, transparent);
     border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
   }
   .scroll-thin::-webkit-scrollbar-thumb:hover {
-    background-color: color-mix(in oklab, var(--c-bright) 26%, transparent);
+    background-color: color-mix(in oklab, var(--text-primary) 26%, transparent);
+  }
+
+  /* Auto-hiding variant: invisible until the pane is hovered or focused.
+     Used by message feeds, DM lists and modal bodies. */
+  .scroll-auto {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .scroll-auto::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-auto::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 160ms ease;
+  }
+  .scroll-auto:hover::-webkit-scrollbar-thumb,
+  .scroll-auto:focus-within::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--text-primary) 18%, transparent);
+  }
+  .scroll-auto:hover,
+  .scroll-auto:focus-within {
+    scrollbar-color: color-mix(in oklab, var(--text-primary) 18%, transparent) transparent;
+  }
+
+  /* Fully hidden track — for rail-style columns that scroll without a bar. */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  /* No visible track, but still scrollable (fallback for old browsers). */
+  .scroll-track-none {
+    scrollbar-color: color-mix(in oklab, var(--text-primary) 14%, transparent) transparent;
+  }
+  .scroll-track-none::-webkit-scrollbar-track {
+    background: transparent;
+    border: 0;
   }
 
   .surface {
-    background-color: var(--c-panel);
+    background-color: var(--bg-elevated);
   }
 
   .glass {
-    background: color-mix(in oklab, var(--c-panel) 72%, transparent);
-    backdrop-filter: blur(18px) saturate(140%);
+    background: color-mix(in oklab, var(--bg-elevated) 72%, transparent);
+    backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   }
 
   /* Signature theme gradient used behind rails and headers. */
@@ -131,6 +236,12 @@
       var(--c-abyss) 42%,
       var(--c-void) 100%
     );
+  }
+
+  /* The app shell wash: a single fixed gradient behind every pane. */
+  .shell-gradient {
+    background-image: var(--bg-app-gradient);
+    background-attachment: fixed;
   }
 
   /* ------------------------------------------------------------------ */
@@ -184,27 +295,29 @@
     }
   }
 
-  /* Dark translucent glass used by sidebars, headers and input bars. */
+  /* Dark translucent glass used by sidebars, headers and input bars.
+     Opacity is driven by --glass-sidebar / --glass-bar so ambient themes
+     let more of the gradient through. */
   .glass-panel {
-    background: color-mix(in oklab, var(--c-abyss) 62%, transparent);
-    backdrop-filter: blur(24px) saturate(150%);
-    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    background: color-mix(in oklab, var(--bg-sidebar) calc(var(--glass-sidebar) * 100%), transparent);
+    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
   }
 
   .glass-bar {
-    background: color-mix(in oklab, var(--c-ink) 58%, transparent);
-    backdrop-filter: blur(20px) saturate(145%);
-    -webkit-backdrop-filter: blur(20px) saturate(145%);
-    border-color: color-mix(in oklab, var(--c-bright) 8%, transparent);
+    background: color-mix(in oklab, var(--bg-surface) calc(var(--glass-bar) * 100%), transparent);
+    backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(145%);
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(145%);
+    border-color: var(--border-subtle);
   }
 
   /* Floating pill composer. */
   .composer-pill {
-    background: color-mix(in oklab, var(--c-panel) 88%, transparent);
+    background: color-mix(in oklab, var(--bg-elevated) 90%, transparent);
     backdrop-filter: blur(22px) saturate(140%);
     -webkit-backdrop-filter: blur(22px) saturate(140%);
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, var(--c-bright) 7%, transparent) inset,
+      0 1px 0 0 color-mix(in oklab, var(--text-primary) 7%, transparent) inset,
       0 18px 40px -22px rgba(0, 0, 0, 0.85);
   }
 

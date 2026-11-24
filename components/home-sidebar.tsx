@@ -89,7 +89,7 @@ export function HomeSidebar({
   onPreviewSound?: (id: string) => void;
 }) {
   return (
-    <aside className="glass-panel flex w-60 shrink-0 flex-col border-r border-white/5">
+    <aside className="glass-panel flex w-60 shrink-0 flex-col border-r border-subtle">
       {/* Find or start a conversation */}
       <div className="shrink-0 p-2.5">
         <div className="flex items-center gap-1 rounded-md bg-void/60 px-2.5 py-1.5 text-[12.5px] ring-1 ring-line/70 focus-within:ring-blurple/50">
@@ -151,7 +151,7 @@ export function HomeSidebar({
           </button>
         </header>
 
-        <div className="scroll-thin min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
+        <div className="scroll-auto min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
           {dms.length === 0 && (
             <p className="px-2 py-3 text-[12px] leading-relaxed text-dim">
               No conversations yet. Add a friend, then start a DM.

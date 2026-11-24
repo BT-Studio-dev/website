@@ -111,7 +111,7 @@ export function Popover({
         width,
         opacity: pos ? 1 : 0,
       }}
-      className="animate-rise z-[90] overflow-hidden rounded-lg border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_92%,transparent)] py-1.5 shadow-2xl shadow-black/60 backdrop-blur-2xl"
+      className="animate-rise z-[90] overflow-hidden rounded-lg border border-subtle bg-[color-mix(in_oklab,var(--c-input)_92%,transparent)] py-1.5 shadow-2xl shadow-black/60 backdrop-blur-2xl"
     >
       {children}
     </div>,
@@ -193,7 +193,7 @@ export function MenuItem({
       {submenu && openSub && (
         <div
           role="menu"
-          className="animate-rise absolute top-[-6px] left-full z-10 ml-1 w-[210px] rounded-lg border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1.5 shadow-2xl shadow-black/60 backdrop-blur-2xl"
+          className="animate-rise absolute top-[-6px] left-full z-10 ml-1 w-[210px] rounded-lg border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1.5 shadow-2xl shadow-black/60 backdrop-blur-2xl"
         >
           {submenu}
         </div>
@@ -211,7 +211,7 @@ export function MenuLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function MenuSeparator() {
-  return <div className="my-1 h-px bg-white/8" />;
+  return <div className="my-1 h-px bg-hover/55" />;
 }
 
 export function MenuCheckbox({
@@ -236,7 +236,7 @@ export function MenuCheckbox({
     >
       <span
         className={`grid h-3.5 w-3.5 shrink-0 place-items-center rounded-[3px] border transition ${
-          checked ? "border-white bg-white text-[var(--c-void)]" : "border-white/45"
+          checked ? "border-white bg-white text-[var(--c-void)]" : "border-subtle"
         }`}
       >
         {checked && (

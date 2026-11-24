@@ -131,7 +131,7 @@ export function AppearancePanel({
                   aria-label={`${preset.name} gradient`}
                   title={preset.name}
                   className={`h-9 w-14 rounded-md ring-2 transition ${
-                    active ? "ring-bright" : "ring-transparent hover:ring-white/40"
+                    active ? "ring-bright" : "ring-transparent hover:ring-subtle"
                   }`}
                   style={{ backgroundImage: `linear-gradient(120deg, ${preset.from}, ${preset.to})` }}
                 />
@@ -224,7 +224,7 @@ export function AppearancePanel({
           <CardLabel>Icon pack</CardLabel>
           <div className="mt-2.5 grid grid-cols-3 gap-2 sm:grid-cols-6">
             {ICON_PACKS.map((pack) => {
-              const active = (settings.iconPack ?? "classic") === pack.id;
+              const active = (settings.iconPack ?? appearance.icon_pack ?? "classic") === pack.id;
               return (
                 <button
                   key={pack.id}

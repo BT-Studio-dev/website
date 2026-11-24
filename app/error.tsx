@@ -30,7 +30,7 @@ export default function GlobalError({
           </button>
           <a
             href="/channels"
-            className="rounded-lg border border-line bg-panel px-4 py-2 text-sm font-semibold transition hover:bg-hover"
+            className="rounded-lg border border-subtle bg-elevated px-4 py-2 text-sm font-semibold transition hover:bg-hover"
           >
             Back to channels
           </a>

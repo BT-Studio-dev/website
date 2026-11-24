@@ -17,7 +17,7 @@ import type { FriendRequest as FriendRequestType } from "@/lib/types";
 
 const AUTHOR_FIELDS = "id, username, display_name, avatar_url, accent_color";
 const PROFILE_FIELDS =
-  "id, username, display_name, avatar_url, accent_color, status, bio, custom_status, custom_status_emoji, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests, banner_url, theme_primary, theme_secondary, avatar_decoration, profile_effect, name_style, nameplate, pronouns, server_tag, connections, widgets, user_settings, bt_pro, created_at";
+  "id, username, display_name, avatar_url, accent_color, status, bio, custom_status, custom_status_emoji, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests, banner_url, theme_primary, theme_secondary, avatar_decoration, profile_effect, name_style, nameplate, pronouns, server_tag, connections, widgets, user_settings, bt_pro, appearance, created_at";
 
 export { PROFILE_FIELDS };
 export type { FriendRequestType as FriendRequest };
@@ -324,6 +324,7 @@ export type ProfilePatch = Partial<
     | "connections"
     | "widgets"
     | "user_settings"
+    | "appearance"
     | "bt_pro"
   >
 >;
@@ -430,6 +431,7 @@ export function normalizeProfile<T extends Profile | null | undefined>(row: T): 
     connections: Array.isArray(row.connections) ? row.connections : [],
     widgets: Array.isArray(row.widgets) ? row.widgets : [],
     user_settings: row.user_settings ?? {},
+    appearance: row.appearance ?? null,
   } as T;
 }
 

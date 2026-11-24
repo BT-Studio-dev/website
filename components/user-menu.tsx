@@ -73,7 +73,7 @@ export function UserMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         title="Profile and status"
-        className="group relative -mx-1 flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-white/8"
+        className="group relative -mx-1 flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-hover/60"
       >
         <span className="relative shrink-0">
           <Avatar
@@ -83,7 +83,7 @@ export function UserMenu({
             size={32}
             status={status}
           />
-          <span className="pointer-events-none absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border-2 border-abyss bg-panel text-[8px] font-bold text-muted opacity-0 transition group-hover:opacity-100">
+          <span className="pointer-events-none absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border-2 border-abyss bg-elevated text-[8px] font-bold text-muted opacity-0 transition group-hover:opacity-100">
             ✎
           </span>
         </span>
@@ -99,7 +99,7 @@ export function UserMenu({
 
       <Popover open={open} onClose={close} anchor={anchorRef.current} width={264} side="top">
         {/* ---- mini profile card ---- */}
-        <div className="relative mx-1.5 mb-1 overflow-hidden rounded-lg border border-white/10">
+        <div className="relative mx-1.5 mb-1 overflow-hidden rounded-lg border border-subtle">
           <div
             className="h-14 w-full"
             style={{
@@ -123,26 +123,26 @@ export function UserMenu({
               />
             </div>
           </div>
-          <div className="bg-[color-mix(in_oklab,var(--c-panel)_88%,transparent)] px-3 pt-6 pb-2.5">
+          <div className="bg-[color-mix(in_oklab,var(--c-elevated)_88%,transparent)] px-3 pt-6 pb-2.5">
             <p className="truncate text-[14px] font-bold text-bright">{name}</p>
             <p className="truncate text-[11.5px] text-dim">@{profile.username}</p>
             {profile.custom_status && (
               <p className="mt-1.5 line-clamp-2 text-[11.5px] text-muted">{profile.custom_status}</p>
             )}
           </div>
-          <div className="flex items-center justify-center gap-1 border-t border-white/8 bg-[color-mix(in_oklab,var(--c-panel)_88%,transparent)] px-2 py-1.5">
+          <div className="flex items-center justify-center gap-1 border-t border-subtle bg-[color-mix(in_oklab,var(--c-elevated)_88%,transparent)] px-2 py-1.5">
             <button
               onClick={() => {
                 close();
                 onOpenProfile();
               }}
-              className="flex-1 rounded-md py-1 text-[11.5px] font-semibold text-bright transition hover:bg-white/10"
+              className="flex-1 rounded-md py-1 text-[11.5px] font-semibold text-bright transition hover:bg-hover/60"
             >
               Edit Profile
             </button>
             <button
               onClick={close}
-              className="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+              className="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
               aria-label="Badges"
               title="Badges"
             >
@@ -150,7 +150,7 @@ export function UserMenu({
             </button>
             <button
               onClick={close}
-              className="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+              className="grid h-6 w-6 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
               aria-label="Avatar decoration"
               title="Avatar decorations"
             >
@@ -165,7 +165,7 @@ export function UserMenu({
             type="button"
             onClick={() => setStatusOpen((v) => !v)}
             aria-expanded={statusOpen}
-            className="flex w-full items-center justify-between rounded-md px-1.5 py-1.5 text-[12.5px] font-semibold text-bright transition hover:bg-white/10"
+            className="flex w-full items-center justify-between rounded-md px-1.5 py-1.5 text-[12.5px] font-semibold text-bright transition hover:bg-hover/60"
           >
             <span className="flex items-center gap-1.5">
               <StatusIcon status={status} />
@@ -176,7 +176,7 @@ export function UserMenu({
           </button>
 
           {statusOpen && (
-            <div className="animate-rise mt-1 rounded-md border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_92%,transparent)] p-1">
+            <div className="animate-rise mt-1 rounded-md border border-subtle bg-[color-mix(in_oklab,var(--c-input)_92%,transparent)] p-1">
               {STATUS_OPTIONS.map((option) => (
                 <div key={option.id} className="relative">
                   <button
@@ -202,7 +202,7 @@ export function UserMenu({
                   </button>
 
                   {option.timed && durationFor === option.id && (
-                    <div className="animate-rise absolute top-0 left-full z-10 ml-1 w-[150px] rounded-md border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+                    <div className="animate-rise absolute top-0 left-full z-10 ml-1 w-[150px] rounded-md border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
                       {STATUS_DURATIONS.map((duration) => (
                         <button
                           key={duration.id}

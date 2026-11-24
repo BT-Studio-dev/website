@@ -174,7 +174,7 @@ export function SettingsNav({
     item.keywords.some((k) => k.includes(needle));
 
   return (
-    <aside className="flex w-[248px] shrink-0 flex-col bg-ink/80">
+    <aside className="glass-panel flex w-[248px] shrink-0 flex-col border-r border-subtle">
       {/* Profile card */}
       <div className="shrink-0 border-b border-line/60 p-3">
         <div
@@ -223,7 +223,7 @@ export function SettingsNav({
       </div>
 
       {/* Groups */}
-      <nav className="scroll-thin min-h-0 flex-1 overflow-y-auto px-2 pb-2">
+      <nav className="scroll-auto min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {NAV_GROUPS.map((group) => {
           const items = group.items.filter(matches);
           if (items.length === 0) return null;

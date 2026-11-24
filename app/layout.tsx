@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/inter";
 import "./globals.css";
+import { APPEARANCE_BOOT_SCRIPT } from "@/lib/theme-boot";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://btcomms.gg"),
@@ -52,7 +53,13 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-dvh bg-void text-bright antialiased">{children}</body>
+      <head>
+        {/* Replays the saved theme before first paint — no wrong-theme flash. */}
+        <script dangerouslySetInnerHTML={{ __html: APPEARANCE_BOOT_SCRIPT }} />
+      </head>
+      <body className="min-h-dvh overflow-x-hidden bg-void text-bright antialiased">
+        {children}
+      </body>
     </html>
   );
 }

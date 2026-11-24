@@ -333,7 +333,7 @@ export function MessageFeed({
   return (
     <section className="ambient-stage flex min-w-0 flex-1 flex-col">
       {/* Channel header */}
-      <header className="glass-bar flex h-12 shrink-0 items-center gap-2 border-b px-4">
+      <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2 overflow-hidden border-b px-4">
         <HashIcon width={18} height={18} className="shrink-0 text-muted" />
         <h2 className="truncate text-[14.5px] font-semibold tracking-tight text-bright">
           {channel.name}
@@ -390,7 +390,7 @@ export function MessageFeed({
       </header>
 
       {search !== null && (
-        <div className="glass-bar flex items-center gap-2 border-b px-4 py-2">
+        <div className="glass-bar flex min-w-0 items-center gap-2 overflow-hidden border-b px-4 py-2">
           <SearchIcon width={15} height={15} className="text-dim" />
           <input
             autoFocus
@@ -409,11 +409,11 @@ export function MessageFeed({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="scroll-thin flex-1 overflow-y-auto px-4 pt-4 pb-2"
+        className="scroll-auto flex-1 overflow-y-auto px-4 pt-4 pb-2"
         aria-live="polite"
         aria-label={`Messages in ${channel.name}`}
       >
-        <div className="mb-6 rounded-xl border border-line/70 bg-ink/50 px-4 py-5">
+        <div className="mb-6 rounded-xl border border-line/70 bg-input/60 px-4 py-5">
           <span className="mb-2 grid h-11 w-11 place-items-center rounded-xl bg-blurple/15 text-blurple-soft">
             <HashIcon width={22} height={22} />
           </span>
@@ -545,7 +545,7 @@ export function MessageFeed({
                     onClick={() => void deleteMessage(message.id)}
                     title="Delete message"
                     aria-label="Delete message"
-                    className="absolute top-1.5 right-2 grid h-7 w-7 place-items-center rounded-md border border-line bg-ink text-muted opacity-0 transition group-hover:opacity-100 hover:text-rose"
+                    className="absolute top-1.5 right-2 grid h-7 w-7 place-items-center rounded-md border border-line bg-input text-muted opacity-0 transition group-hover:opacity-100 hover:text-rose"
                   >
                     <TrashIcon width={14} height={14} />
                   </button>

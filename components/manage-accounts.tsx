@@ -52,7 +52,7 @@ export function ManageAccountsModal({
               className={`flex items-center gap-3 rounded-xl border p-2.5 transition ${
                 account.active
                   ? "border-mint/45 bg-mint/10"
-                  : "border-line/70 bg-white/[0.03] hover:bg-white/[0.06]"
+                  : "border-line/70 bg-hover/45 hover:bg-hover/45"
               }`}
             >
               <Avatar

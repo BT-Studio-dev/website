@@ -84,7 +84,7 @@ export function UserPanel({
     profile.custom_status || (profile.bio?.trim() ?? "") || presenceLabel(currentStatus);
 
   return (
-    <div className="glass-bar relative flex shrink-0 items-center gap-0.5 border-t px-2 py-1.5">
+    <div className="glass-bar relative flex min-w-0 shrink-0 items-center gap-0.5 overflow-hidden border-t px-2 py-1.5">
       {onSetStatus ? (
         <UserMenu
           profile={profile}
@@ -99,7 +99,7 @@ export function UserPanel({
       ) : (
         <button
           onClick={onOpenSettings}
-          className="group flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-white/8"
+          className="group flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 text-left transition hover:bg-hover/60"
         >
           <Avatar
             name={profile.display_name}
@@ -122,7 +122,7 @@ export function UserPanel({
           onClick={onOpenAddFriend}
           title={pendingCount > 0 ? `${pendingCount} pending friend requests` : "Add a friend"}
           aria-label="Add a friend"
-          className="relative grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition hover:bg-white/8 hover:text-bright"
+          className="relative grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
         >
           <FriendsIcon width={17} height={17} />
           {pendingCount > 0 && (
@@ -140,7 +140,7 @@ export function UserPanel({
             aria-label={muted ? "Unmute" : "Mute"}
             aria-pressed={muted}
             className={`grid h-8 w-8 place-items-center rounded-md transition ${
-              muted ? "text-rose hover:bg-rose/15" : "text-muted hover:bg-white/8 hover:text-bright"
+              muted ? "text-rose hover:bg-rose/15" : "text-muted hover:bg-hover/60 hover:text-bright"
             }`}
           >
             {muted ? <MicOffIcon width={16} height={16} /> : <MicIcon width={16} height={16} />}
@@ -166,7 +166,7 @@ export function UserPanel({
             aria-label={deafened ? "Undeafen" : "Deafen"}
             aria-pressed={deafened}
             className={`grid h-8 w-8 place-items-center rounded-md transition ${
-              deafened ? "text-rose hover:bg-rose/15" : "text-muted hover:bg-white/8 hover:text-bright"
+              deafened ? "text-rose hover:bg-rose/15" : "text-muted hover:bg-hover/60 hover:text-bright"
             }`}
           >
             <HeadphonesIcon width={16} height={16} />
@@ -188,7 +188,7 @@ export function UserPanel({
           onClick={onOpenSettings}
           title="User Settings"
           aria-label="User Settings"
-          className="grid h-8 w-8 place-items-center rounded-md text-muted transition hover:bg-white/8 hover:text-bright"
+          className="grid h-8 w-8 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
         >
           <SettingsIcon width={16} height={16} />
         </button>
@@ -236,7 +236,7 @@ export function UserPanel({
               setMicOpen(false);
               (onOpenVoiceSettings ?? onOpenSettings)();
             }}
-            className="mt-1.5 w-full rounded-md border border-white/10 py-1.5 text-[12px] font-semibold text-bright transition hover:bg-white/10"
+            className="mt-1.5 w-full rounded-md border border-subtle py-1.5 text-[12px] font-semibold text-bright transition hover:bg-hover/60"
           >
             Voice Settings
           </button>
@@ -289,7 +289,7 @@ export function UserPanel({
               <button
                 key={sound.id}
                 onClick={() => onPreviewSound?.(sound.id)}
-                className="rounded border border-white/10 py-1 text-[10.5px] font-semibold text-muted transition hover:bg-white/10 hover:text-bright"
+                className="rounded border border-subtle py-1 text-[10.5px] font-semibold text-muted transition hover:bg-hover/60 hover:text-bright"
               >
                 {sound.label}
               </button>
@@ -300,7 +300,7 @@ export function UserPanel({
               setOutOpen(false);
               (onOpenVoiceSettings ?? onOpenSettings)();
             }}
-            className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-white/10 py-1.5 text-[12px] font-semibold text-bright transition hover:bg-white/10"
+            className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-md border border-subtle py-1.5 text-[12px] font-semibold text-bright transition hover:bg-hover/60"
           >
             <DeviceIcon width={12} height={12} /> Voice Settings
           </button>

@@ -62,8 +62,8 @@ export function DmProfilePanel({
     : "Recently";
 
   return (
-    <aside className="glass-panel flex w-[280px] shrink-0 flex-col border-l border-white/5">
-      <div className="scroll-thin flex-1 overflow-y-auto">
+    <aside className="glass-panel flex w-[280px] shrink-0 flex-col border-l border-subtle">
+      <div className="scroll-auto flex-1 overflow-y-auto">
         {/* banner */}
         <div className="relative">
           <div
@@ -86,7 +86,7 @@ export function DmProfilePanel({
             <CloseIcon width={12} height={12} />
           </button>
           <div className="absolute -bottom-7 left-4">
-            <div className="rounded-full ring-[5px] ring-[color-mix(in_oklab,var(--c-abyss)_80%,transparent)]">
+            <div className="rounded-full ring-[5px] ring-[color-mix(in_oklab,var(--c-sidebar)_80%,transparent)]">
               <Avatar
                 name={name}
                 src={peer.avatar_url}
@@ -104,7 +104,7 @@ export function DmProfilePanel({
           {peer.pronouns && <p className="mt-0.5 text-[11px] text-dim">{peer.pronouns}</p>}
 
           {peer.custom_status && (
-            <div className="mt-2.5 rounded-md border border-white/8 bg-white/5 px-2.5 py-1.5">
+            <div className="mt-2.5 rounded-md border border-subtle bg-hover/55 px-2.5 py-1.5">
               <p className="text-[12px] leading-relaxed text-muted">{peer.custom_status}</p>
             </div>
           )}
@@ -116,7 +116,7 @@ export function DmProfilePanel({
           </div>
 
           {peer.bio && (
-            <p className="mt-3 border-t border-white/8 pt-3 text-[12px] leading-relaxed whitespace-pre-wrap text-muted">
+            <p className="mt-3 border-t border-subtle pt-3 text-[12px] leading-relaxed whitespace-pre-wrap text-muted">
               {peer.bio}
             </p>
           )}
@@ -148,7 +148,7 @@ export function DmProfilePanel({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-white/8 p-3">
+      <div className="shrink-0 border-t border-subtle p-3">
         <button
           onClick={onOpenProfile}
           className="flex w-full items-center justify-center gap-1.5 rounded-md bg-blurple py-2 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft"
@@ -163,7 +163,7 @@ export function DmProfilePanel({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mt-3 rounded-lg border border-white/8 bg-white/[0.04] p-2.5">
+    <div className="mt-3 rounded-lg border border-subtle bg-hover/45 p-2.5">
       <p className="mb-1.5 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">{title}</p>
       {children}
     </div>
@@ -176,7 +176,7 @@ function Badge({ tone, children }: { tone: "mint" | "amber" | "dim"; children: R
       ? "bg-mint/15 text-mint"
       : tone === "amber"
         ? "bg-amber/15 text-amber"
-        : "bg-white/8 text-dim";
+        : "bg-hover/55 text-dim";
   return (
     <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${cls}`}>
       {children}

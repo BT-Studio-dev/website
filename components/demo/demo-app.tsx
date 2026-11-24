@@ -335,7 +335,7 @@ export function DemoApp({
         font_scale: me.font_scale,
       }}
     >
-      <div className="flex h-dvh w-full flex-col overflow-hidden">
+      <div className="shell-gradient flex h-dvh w-screen flex-col overflow-hidden overflow-x-hidden">
         {bannerVisible && (
           <div className="flex shrink-0 items-center gap-2 border-b border-amber/25 bg-amber/10 px-3 py-1.5 text-[11.5px] text-amber">
             <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber" />
@@ -955,7 +955,7 @@ export function DemoApp({
                   className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-medium transition ${
                     channelKind === kind
                       ? "border-blurple/60 bg-blurple/15 text-bright"
-                      : "border-line bg-ink text-muted hover:bg-hover/60"
+                      : "border-line bg-input text-muted hover:bg-hover/60"
                   }`}
                 >
                   {kind === "text" ? <HashIcon width={14} height={14} /> : <SpeakerIcon width={14} height={14} />}
@@ -972,7 +972,7 @@ export function DemoApp({
                 onChange={(e) => setChannelName(e.target.value)}
                 maxLength={40}
                 placeholder={channelKind === "text" ? "design-review" : "Design Voice"}
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-blurple/60"
+                className="w-full rounded-lg border border-line bg-input px-3 py-2 text-sm text-bright outline-none focus:border-blurple/60"
               />
             </label>
             {channelKind === "text" && (
@@ -985,7 +985,7 @@ export function DemoApp({
                   onChange={(e) => setChannelTopic(e.target.value)}
                   maxLength={120}
                   placeholder="What is this channel about?"
-                  className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-blurple/60"
+                  className="w-full rounded-lg border border-line bg-input px-3 py-2 text-sm text-bright outline-none focus:border-blurple/60"
                 />
               </label>
             )}
@@ -1001,7 +1001,7 @@ export function DemoApp({
           onClose={() => setDialog(null)}
         >
           <div className="space-y-4">
-            <div className="flex items-center gap-2 rounded-lg border border-line bg-ink px-2.5 py-1.5">
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-input px-2.5 py-1.5">
               <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-muted">
                 btcomms.gg/channels?invite={server.invite_code}
               </code>
@@ -1027,7 +1027,7 @@ export function DemoApp({
                   value={joiningCode}
                   onChange={(e) => setJoiningCode(e.target.value)}
                   placeholder="design-guild"
-                  className="w-full rounded-lg border border-line bg-ink px-3 py-2 font-mono text-[12.5px] outline-none focus:border-blurple/60"
+                  className="w-full rounded-lg border border-line bg-input px-3 py-2 font-mono text-[12.5px] text-bright outline-none focus:border-blurple/60"
                 />
                 <button
                   onClick={() => {
@@ -1064,7 +1064,7 @@ export function DemoApp({
             {demoStore.servers.map((candidate) => (
               <li
                 key={candidate.id}
-                className="flex items-center gap-3 rounded-xl border border-line bg-ink/60 p-3"
+                className="flex items-center gap-3 rounded-xl border border-line bg-input/60 p-3"
               >
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-raised text-lg">
                   {candidate.icon}
@@ -1129,7 +1129,7 @@ function SimpleView({
       <header className="flex h-12 shrink-0 items-center border-b border-line/60 px-4">
         <h2 className="text-[15px] font-bold tracking-tight text-bright">{title}</h2>
       </header>
-      <div className="scroll-thin flex-1 overflow-y-auto p-6">
+      <div className="scroll-auto flex-1 overflow-y-auto p-6">
         <div className="max-w-2xl">
           <h3 className="text-xl font-bold tracking-tight text-bright">{heading}</h3>
           <p className="mt-1 text-[13px] text-muted">{body}</p>
@@ -1224,7 +1224,7 @@ function DemoSettings({
       aria-modal="true"
       aria-label="User settings"
     >
-      <div className="animate-rise flex h-full w-full overflow-hidden bg-panel shadow-2xl shadow-black/60">
+      <div className="animate-rise flex h-full w-full overflow-hidden bg-elevated shadow-2xl shadow-black/60">
         <SettingsNav
           profile={me}
           active={section === "edit-profiles" ? "account" : section}
@@ -1236,7 +1236,7 @@ function DemoSettings({
           pendingRequests={0}
         />
 
-        <main className="relative flex min-w-0 flex-1 flex-col bg-panel">
+        <main className="relative flex min-w-0 flex-1 flex-col bg-elevated">
           <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line/50 px-8 py-5">
             <h1 className="truncate text-[19px] font-bold tracking-tight text-bright">
               {section === "appearance"
@@ -1254,7 +1254,7 @@ function DemoSettings({
             </button>
           </header>
 
-          <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-8 py-6">
+          <div className="scroll-auto min-h-0 flex-1 overflow-y-auto px-8 py-6">
             <div className="mx-auto max-w-3xl">
               {section === "appearance" && <AppearancePanel {...appearanceProps} />}
 

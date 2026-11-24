@@ -336,11 +336,11 @@ export function EditProfileModal({
         </div>
       </header>
 
-      <div className="scroll-thin grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[300px_minmax(0,1fr)_336px] xl:overflow-hidden">
+      <div className="scroll-auto grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 xl:grid-cols-[300px_minmax(0,1fr)_336px] xl:overflow-hidden">
         {/* ------------------------- left: customization ------------------------ */}
-        <div className="scroll-thin min-h-0 space-y-3 xl:overflow-y-auto xl:pr-1">
+        <div className="scroll-auto min-h-0 space-y-3 xl:overflow-y-auto xl:pr-1">
           {/* Profile switcher */}
-          <section className="rounded-xl border border-line/80 bg-panel/70 p-3">
+          <section className="rounded-xl border border-line/80 bg-elevated/60 p-3">
             <p className="mb-1.5 text-[10.5px] font-semibold tracking-widest text-dim uppercase">
               Profile
             </p>
@@ -364,7 +364,7 @@ export function EditProfileModal({
           </section>
 
           {scope !== "main" ? (
-            <section className="space-y-3 rounded-xl border border-line/80 bg-panel/70 p-3">
+            <section className="space-y-3 rounded-xl border border-line/80 bg-elevated/60 p-3">
               <CardLabel>Per-server overrides</CardLabel>
               <Field label="Nickname">
                 <input
@@ -398,7 +398,7 @@ export function EditProfileModal({
           ) : (
             <>
               {/* Identity */}
-              <section className="space-y-2.5 rounded-xl border border-line/80 bg-panel/70 p-3">
+              <section className="space-y-2.5 rounded-xl border border-line/80 bg-elevated/60 p-3">
                 <CardLabel>Identity</CardLabel>
                 <Field label="Display name">
                   <input
@@ -463,7 +463,7 @@ export function EditProfileModal({
               />
 
               {/* Avatar + decoration */}
-              <section className="space-y-2.5 rounded-xl border border-line/80 bg-panel/70 p-3">
+              <section className="space-y-2.5 rounded-xl border border-line/80 bg-elevated/60 p-3">
                 <CardLabel>Avatar & Decoration</CardLabel>
                 <div className="flex items-center gap-2.5">
                   <label className="group relative cursor-pointer">
@@ -533,7 +533,7 @@ export function EditProfileModal({
               </section>
 
               {/* Banner */}
-              <section className="space-y-2.5 rounded-xl border border-line/80 bg-panel/70 p-3">
+              <section className="space-y-2.5 rounded-xl border border-line/80 bg-elevated/60 p-3">
                 <CardLabel>Banner</CardLabel>
                 <div className="flex flex-wrap gap-1.5">
                   {BANNER_SWATCHES.map((color) => (
@@ -666,7 +666,7 @@ export function EditProfileModal({
         </div>
 
         {/* --------------------------- center: preview -------------------------- */}
-        <div className="scroll-thin min-h-0 xl:overflow-y-auto">
+        <div className="scroll-auto min-h-0 xl:overflow-y-auto">
           <div className="mx-auto max-w-[420px]">
             <p className="mb-2 text-center text-[10.5px] font-semibold tracking-widest text-dim uppercase">
               Live preview
@@ -694,7 +694,7 @@ export function EditProfileModal({
             />
 
             {/* Bio editor */}
-            <div className="mt-3 rounded-xl border border-line/80 bg-panel/70 p-3">
+            <div className="mt-3 rounded-xl border border-line/80 bg-elevated/60 p-3">
               <p className="mb-1.5 text-[10.5px] font-semibold tracking-widest text-dim uppercase">
                 About me
               </p>
@@ -710,7 +710,7 @@ export function EditProfileModal({
             </div>
 
             {/* Connections */}
-            <div className="mt-3 rounded-xl border border-line/80 bg-panel/70 p-3">
+            <div className="mt-3 rounded-xl border border-line/80 bg-elevated/60 p-3">
               <p className="mb-2 text-[10.5px] font-semibold tracking-widest text-dim uppercase">
                 Connections
               </p>
@@ -766,7 +766,7 @@ export function EditProfileModal({
 
       {/* Save bar */}
       {dirty && (
-        <div className="animate-rise flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/60 bg-abyss/95 px-5 py-3 backdrop-blur">
+        <div className="animate-rise flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-line/60 bg-sidebar/95 px-5 py-3 backdrop-blur">
           <p className="text-[12.5px] font-medium text-amber">Careful — you have unsaved changes!</p>
           <div className="flex items-center gap-2">
             <button
@@ -849,7 +849,7 @@ function ChipSection({
   gated?: (pro: boolean | undefined) => boolean;
 }) {
   return (
-    <section className="rounded-xl border border-line/80 bg-panel/70 p-3">
+    <section className="rounded-xl border border-line/80 bg-elevated/60 p-3">
       <p className="mb-1.5 text-[10.5px] font-semibold tracking-widest text-dim uppercase">
         {label}
       </p>

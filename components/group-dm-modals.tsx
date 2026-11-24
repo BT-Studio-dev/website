@@ -153,7 +153,7 @@ export function NewMessageModal({
         </p>
       )}
 
-      <div className="scroll-thin mt-3 max-h-72 space-y-0.5 overflow-y-auto">
+      <div className="scroll-auto mt-3 max-h-72 space-y-0.5 overflow-y-auto">
         {rows.map((person) => {
           const name = person.display_name || person.username;
           const checked = selectedIds.has(person.id);
@@ -266,7 +266,7 @@ export function ChangeIconModal({
             <span className="text-2xl">🖼️</span>
           )}
         </div>
-        <label className="cursor-pointer rounded-md border border-line bg-ink px-3 py-1.5 text-[12px] font-semibold text-bright transition hover:bg-hover">
+        <label className="cursor-pointer rounded-md border border-line bg-input px-3 py-1.5 text-[12px] font-semibold text-bright transition hover:bg-hover">
           <span className="flex items-center gap-1.5">
             <UploadIcon width={13} height={13} /> Upload Image
           </span>
@@ -291,7 +291,7 @@ export function ChangeIconModal({
               key={gif.id}
               onClick={() => setPreview(cssToDataUrl(gif.css))}
               title={gif.label}
-              className="group relative h-16 rounded-lg ring-1 ring-white/10 transition hover:ring-blurple"
+              className="group relative h-16 rounded-lg ring-1 ring-subtle transition hover:ring-blurple"
               style={{ backgroundImage: gif.css }}
             >
               <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-black/45 py-0.5 text-[9.5px] font-semibold text-white opacity-0 transition group-hover:opacity-100">

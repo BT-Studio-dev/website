@@ -37,7 +37,7 @@ export function CreateServerModal({
     >
       <button
         onClick={() => onStart(null)}
-        className="group flex w-full items-center gap-3 rounded-xl border border-line/70 bg-white/[0.04] p-3 text-left transition hover:border-blurple/50 hover:bg-white/[0.08]"
+        className="group flex w-full items-center gap-3 rounded-xl border border-line/70 bg-hover/45 p-3 text-left transition hover:border-blurple/50 hover:bg-hover/45"
       >
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blurple to-blurple-soft text-white">
           <PlusIcon width={20} height={20} />
@@ -59,7 +59,7 @@ export function CreateServerModal({
           <button
             key={template.id}
             onClick={() => onStart(template)}
-            className="group flex items-center gap-2.5 rounded-xl border border-line/70 bg-white/[0.03] p-2.5 text-left transition hover:border-mint/50 hover:bg-white/[0.07]"
+            className="group flex items-center gap-2.5 rounded-xl border border-line/70 bg-hover/45 p-2.5 text-left transition hover:border-mint/50 hover:bg-hover/45"
           >
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-raised text-lg">
               {template.emoji}
@@ -168,7 +168,7 @@ export function ServerWizardModal({
                 className={`flex items-start gap-3 rounded-xl border p-3 text-left transition ${
                   active
                     ? "border-blurple bg-blurple/12"
-                    : "border-line/70 bg-white/[0.03] hover:bg-white/[0.07]"
+                    : "border-line/70 bg-hover/45 hover:bg-hover/45"
                 }`}
               >
                 <span className="text-xl">{option.emoji}</span>
@@ -358,7 +358,7 @@ export function JoinServerModal({
             <button
               key={example}
               onClick={() => setCode(example)}
-              className="rounded-full border border-line bg-ink px-2.5 py-0.5 font-mono text-[11px] text-muted transition hover:border-blurple/50 hover:text-bright"
+              className="rounded-full border border-line bg-input px-2.5 py-0.5 font-mono text-[11px] text-muted transition hover:border-blurple/50 hover:text-bright"
             >
               {example}
             </button>
@@ -366,7 +366,7 @@ export function JoinServerModal({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-line/60 bg-white/[0.04] px-3 py-2.5">
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-line/60 bg-hover/45 px-3 py-2.5">
         <div>
           <p className="text-[12.5px] font-semibold text-bright">Don&apos;t have an invite?</p>
           <p className="text-[11.5px] text-dim">Explore public servers instead.</p>
@@ -414,7 +414,7 @@ export function OnboardingView({
 
   return (
     <section className="ambient-stage flex min-w-0 flex-1 flex-col">
-      <header className="glass-bar flex h-12 shrink-0 items-center justify-between border-b px-4">
+      <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center justify-between gap-2 overflow-hidden border-b px-4">
         <div className="flex min-w-0 items-center gap-2">
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-raised text-[11px] font-bold text-white">
             {initials}
@@ -424,13 +424,13 @@ export function OnboardingView({
         <button
           onClick={onDismiss}
           aria-label="Dismiss onboarding"
-          className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+          className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
         >
           <CloseIcon width={14} height={14} />
         </button>
       </header>
 
-      <div className="scroll-thin flex-1 overflow-y-auto px-6 py-10">
+      <div className="scroll-auto flex-1 overflow-y-auto px-6 py-10">
         <div className="mx-auto max-w-3xl text-center">
           <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-blurple to-blurple-soft text-2xl text-white shadow-xl shadow-blurple/30">
             {initials}
@@ -449,7 +449,7 @@ export function OnboardingView({
               <button
                 key={card.id}
                 onClick={() => onAction(card.id)}
-                className="group rounded-xl border border-white/10 bg-white/[0.04] p-3.5 text-left backdrop-blur-sm transition hover:border-blurple/50 hover:bg-white/[0.08]"
+                className="group rounded-xl border border-subtle bg-hover/45 p-3.5 text-left backdrop-blur-sm transition hover:border-blurple/50 hover:bg-hover/45"
               >
                 <span className="text-xl">{card.emoji}</span>
                 <p className="mt-1.5 text-[13px] font-semibold text-bright">{card.title}</p>

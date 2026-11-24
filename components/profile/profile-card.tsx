@@ -162,7 +162,7 @@ export function ProfileCard({
 
   return (
     <article
-      className="relative overflow-hidden rounded-2xl border border-line/80 bg-panel shadow-xl shadow-black/40"
+      className="relative overflow-hidden rounded-2xl border border-line/80 bg-elevated shadow-xl shadow-black/40"
       style={{
         backgroundImage:
           profile.theme_primary && profile.theme_secondary

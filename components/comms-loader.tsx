@@ -210,7 +210,7 @@ export function CommsLoader({
 
   if (state.phase === "error") {
     return (
-      <div className="grid h-dvh place-items-center bg-void px-6 text-center">
+      <div className="shell-gradient grid h-dvh place-items-center bg-void px-6 text-center">
         <div>
           <h1 className="text-lg font-semibold">Something went wrong</h1>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted">{state.message}</p>
@@ -312,8 +312,8 @@ function EmptyWorkspace({
   }
 
   return (
-    <div className="grid h-dvh place-items-center bg-void px-6">
-      <div className="w-full max-w-md rounded-2xl border border-line bg-panel/90 p-7 shadow-2xl shadow-black/50">
+    <div className="shell-gradient grid h-dvh place-items-center bg-void px-6">
+      <div className="w-full max-w-md rounded-2xl border border-line bg-elevated/90 p-7 shadow-2xl shadow-black/50">
         <h1 className="text-lg font-bold tracking-tight">You&apos;re not in a server yet</h1>
         <p className="mt-1.5 text-[13px] text-muted">
           Join with an invite code, or spin up your own server in one click.
@@ -324,7 +324,7 @@ function EmptyWorkspace({
             value={code}
             onChange={(e) => setCode(e.target.value)}
             placeholder="Invite code — e.g. bt-comms"
-            className="w-full rounded-lg border border-line bg-ink px-3 py-2 font-mono text-[13px] outline-none focus:border-blurple/60"
+            className="w-full rounded-lg border border-line bg-input px-3 py-2 font-mono text-[13px] outline-none focus:border-blurple/60"
           />
           <button
             onClick={() => void join()}
@@ -346,7 +346,7 @@ function EmptyWorkspace({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Your server's name"
-            className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-blurple/60"
+            className="w-full rounded-lg border border-line bg-input px-3 py-2 text-[13px] outline-none focus:border-blurple/60"
           />
           <button
             onClick={() => void createServer()}

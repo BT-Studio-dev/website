@@ -97,7 +97,7 @@ export function DmView({
     <section className="ambient-stage flex min-w-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
         {/* header */}
-        <header className="glass-bar flex h-12 shrink-0 items-center gap-2.5 border-b px-4">
+        <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2.5 overflow-hidden border-b px-4">
           <button
             type="button"
             onClick={() => peer?.id && onOpenProfile?.(peer.id)}
@@ -139,7 +139,7 @@ export function DmView({
             {group && onInviteToGroup && (
               <button
                 onClick={onInviteToGroup}
-                className="hidden items-center gap-1.5 rounded-md bg-white/8 px-2.5 py-1 text-[12px] font-semibold text-bright transition hover:bg-white/14 sm:flex"
+                className="hidden items-center gap-1.5 rounded-md bg-hover/55 px-2.5 py-1 text-[12px] font-semibold text-bright transition hover:bg-hover/60 sm:flex"
               >
                 <UsersIcon width={13} height={13} /> Invite
               </button>
@@ -147,7 +147,7 @@ export function DmView({
             {group && onEditGroup && (
               <button
                 onClick={onEditGroup}
-                className="hidden items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-semibold text-muted transition hover:bg-white/8 hover:text-bright sm:flex"
+                className="hidden items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-semibold text-muted transition hover:bg-hover/60 hover:text-bright sm:flex"
               >
                 Edit Group
               </button>
@@ -157,7 +157,7 @@ export function DmView({
               title="Search conversation"
               aria-label="Search conversation"
               className={`grid h-8 w-8 place-items-center rounded-md transition ${
-                search !== null ? "bg-white/12 text-bright" : "text-muted hover:bg-white/8 hover:text-bright"
+                search !== null ? "bg-hover/55 text-bright" : "text-muted hover:bg-hover/60 hover:text-bright"
               }`}
             >
               <SearchIcon width={17} height={17} />
@@ -165,7 +165,7 @@ export function DmView({
             <button
               title="Start voice call"
               aria-label="Start voice call"
-              className="grid h-8 w-8 place-items-center rounded-md text-muted transition hover:bg-white/8 hover:text-bright"
+              className="grid h-8 w-8 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
             >
               <PhoneIcon width={16} height={16} />
             </button>
@@ -176,7 +176,7 @@ export function DmView({
                 title={showPanel ? "Hide member panel" : "Show member panel"}
                 aria-label={showPanel ? "Hide member panel" : "Show member panel"}
                 className={`grid h-8 w-8 place-items-center rounded-md transition ${
-                  showPanel ? "bg-white/12 text-bright" : "text-muted hover:bg-white/8 hover:text-bright"
+                  showPanel ? "bg-hover/55 text-bright" : "text-muted hover:bg-hover/60 hover:text-bright"
                 }`}
               >
                 <UsersIcon width={17} height={17} />
@@ -186,7 +186,7 @@ export function DmView({
         </header>
 
         {search !== null && (
-          <div className="glass-bar flex items-center gap-2 border-b px-4 py-2">
+          <div className="glass-bar flex min-w-0 items-center gap-2 overflow-hidden border-b px-4 py-2">
             <SearchIcon width={15} height={15} className="text-dim" />
             <input
               autoFocus
@@ -207,8 +207,8 @@ export function DmView({
         )}
 
         {/* feed */}
-        <div ref={scrollRef} className="scroll-thin flex-1 overflow-y-auto px-4 pt-4">
-          <div className="mb-6 flex flex-col items-center rounded-xl border border-white/10 bg-white/4 px-4 py-6 text-center backdrop-blur-sm">
+        <div ref={scrollRef} className="scroll-auto flex-1 overflow-y-auto px-4 pt-4">
+          <div className="mb-6 flex flex-col items-center rounded-xl border border-subtle bg-hover/55 px-4 py-6 text-center backdrop-blur-sm">
             {group ? (
               <GroupAvatar group={group} size={64} />
             ) : (
@@ -267,16 +267,16 @@ export function DmView({
 
                 {showDay && (
                   <div className="my-4 flex items-center gap-3" role="separator">
-                    <span className="h-px flex-1 bg-white/10" />
-                    <span className="rounded-full border border-white/10 bg-void/50 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-dim uppercase backdrop-blur">
+                    <span className="h-px flex-1 bg-hover/55" />
+                    <span className="rounded-full border border-subtle bg-void/50 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-dim uppercase backdrop-blur">
                       {formatDayLabel(message.created_at)}
                     </span>
-                    <span className="h-px flex-1 bg-white/10" />
+                    <span className="h-px flex-1 bg-hover/55" />
                   </div>
                 )}
 
                 <article
-                  className={`group relative flex gap-3 rounded-md px-1.5 transition-colors hover:bg-white/[0.045] density-row ${
+                  className={`group relative flex gap-3 rounded-md px-1.5 transition-colors hover:bg-hover/45 density-row ${
                     grouped ? "" : "mt-3"
                   }`}
                 >
@@ -320,7 +320,7 @@ export function DmView({
                       onClick={() => onDelete(message.id)}
                       title="Delete message"
                       aria-label="Delete message"
-                      className="absolute top-1.5 right-2 grid h-7 w-7 place-items-center rounded-md border border-white/10 bg-void/90 text-muted opacity-0 transition group-hover:opacity-100 hover:text-rose"
+                      className="absolute top-1.5 right-2 grid h-7 w-7 place-items-center rounded-md border border-subtle bg-void/90 text-muted opacity-0 transition group-hover:opacity-100 hover:text-rose"
                     >
                       <TrashIcon width={14} height={14} />
                     </button>
@@ -343,7 +343,7 @@ export function DmView({
               type="button"
               title="Notifications"
               aria-label="Conversation notifications"
-              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white/10 hover:text-bright"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-muted transition hover:bg-hover/60 hover:text-bright"
             >
               <BellIcon width={15} height={15} />
             </button>
@@ -361,13 +361,13 @@ export function DmView({
       )}
 
       {group && showPanel && (
-        <aside className="glass-panel hidden w-60 shrink-0 flex-col border-l border-white/5 lg:flex">
-          <div className="border-b border-white/8 px-3 py-3">
+        <aside className="glass-panel hidden w-60 shrink-0 flex-col border-l border-subtle lg:flex">
+          <div className="border-b border-subtle px-3 py-3">
             <p className="text-[11px] font-bold tracking-[0.12em] text-dim uppercase">
               Members—{group.members.length}
             </p>
           </div>
-          <ul className="scroll-thin flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
+          <ul className="scroll-auto flex-1 space-y-0.5 overflow-y-auto px-2 py-2">
             {group.members.map((member) => {
               const isOwner = member.id === group.owner_id;
               const name = member.display_name || member.username;
@@ -375,7 +375,7 @@ export function DmView({
                 <li key={member.id}>
                   <button
                     onClick={() => onOpenProfile?.(member.id)}
-                    className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left transition hover:bg-white/8"
+                    className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left transition hover:bg-hover/60"
                   >
                     <Avatar
                       name={name}

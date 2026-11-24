@@ -100,9 +100,9 @@ export function ChannelSidebar({
   const joinedVoice = voiceStates.find((v) => v.user_id === profile.id);
 
   return (
-    <aside className="glass-panel flex w-60 shrink-0 flex-col border-r border-white/5">
+    <aside className="glass-panel flex w-60 shrink-0 flex-col border-r border-subtle">
       {/* Server header */}
-      <div className="flex h-12 shrink-0 items-center gap-1 border-b border-white/8 px-2 shadow-sm">
+      <div className="flex h-12 shrink-0 items-center gap-1 border-b border-subtle px-2 shadow-sm">
         {canManage && (
           <ServerMenu
             serverName={server.name}
@@ -118,7 +118,7 @@ export function ChannelSidebar({
           <button
             onClick={onCopyInvite}
             title="Copy invite link"
-            className="flex min-w-0 flex-1 items-center rounded-md px-1 py-1 text-left transition hover:bg-white/8"
+            className="flex min-w-0 flex-1 items-center rounded-md px-1 py-1 text-left transition hover:bg-hover/60"
           >
             <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tracking-tight text-bright">
               {server.name}
@@ -129,13 +129,13 @@ export function ChannelSidebar({
           onClick={() => onServerAction?.("invite")}
           title="Invite people"
           aria-label="Invite people"
-          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition hover:bg-white/8 hover:text-bright"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
         >
           <PlusIcon width={15} height={15} />
         </button>
       </div>
 
-      <div className="scroll-thin flex-1 space-y-5 overflow-y-auto px-2 py-3">
+      <div className="scroll-auto flex-1 space-y-5 overflow-y-auto px-2 py-3">
         {isNewServer && <GetStartedBanner />}
 
         <ChannelGroup
@@ -338,7 +338,7 @@ function ChannelRow({
   return (
     <div
       className={`group flex items-center rounded-md transition ${
-        active ? "bg-white/12 text-bright" : "text-muted hover:bg-white/8 hover:text-bright"
+        active ? "bg-hover/55 text-bright" : "text-muted hover:bg-hover/60 hover:text-bright"
       } ${readOnly ? "opacity-60" : ""}`}
     >
       <button

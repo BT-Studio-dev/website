@@ -146,7 +146,7 @@ export function ChatComposer({
   }
 
   const attachTray = (
-    <div className="animate-rise absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+    <div className="animate-rise absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
       <p className="px-2.5 pt-1 pb-1 text-[10px] font-bold tracking-[0.14em] text-dim uppercase">
         Attach
       </p>
@@ -175,7 +175,7 @@ export function ChatComposer({
     <div className="relative shrink-0 px-3 pb-3 md:px-4 md:pb-4">
       {/* autocomplete above the pill */}
       {showAutocomplete && (
-        <div className="animate-rise absolute bottom-full left-3 z-30 mb-1 max-h-64 w-[min(420px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-1 shadow-2xl shadow-black/60 backdrop-blur-2xl scroll-thin">
+        <div className="animate-rise absolute bottom-full left-3 z-30 mb-1 max-h-64 w-[min(420px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-1 shadow-2xl shadow-black/60 backdrop-blur-2xl scroll-auto">
           <p className="px-2 py-1 text-[10px] font-bold tracking-[0.14em] text-dim uppercase">
             {isSlash ? "Commands" : "Members"}
           </p>
@@ -217,8 +217,8 @@ export function ChatComposer({
 
       {/* emoji picker */}
       {tray === "emoji" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[298px] rounded-xl border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
-          <div className="scroll-thin max-h-56 overflow-y-auto">
+        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[298px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+          <div className="scroll-auto max-h-56 overflow-y-auto">
             {EMOJI_PALETTE.map((group) => (
               <div key={group.group} className="mb-1.5">
                 <p className="px-1 pb-1 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
@@ -229,7 +229,7 @@ export function ChatComposer({
                     <button
                       key={emoji}
                       onClick={() => setValue((v) => v + emoji)}
-                      className="grid h-7 place-items-center rounded text-[16px] transition hover:bg-white/12"
+                      className="grid h-7 place-items-center rounded text-[16px] transition hover:bg-hover/60"
                     >
                       {emoji}
                     </button>
@@ -243,7 +243,7 @@ export function ChatComposer({
 
       {/* gif / sticker / gift trays */}
       {tray === "gif" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[300px] rounded-xl border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[300px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <p className="px-1 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
             Trending GIFs
           </p>
@@ -265,7 +265,7 @@ export function ChatComposer({
       )}
 
       {tray === "sticker" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[250px] rounded-xl border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[250px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <p className="px-1 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
             BT Comms Stickers
           </p>
@@ -277,7 +277,7 @@ export function ChatComposer({
                   setValue((v) => `${v} ${sticker} `.trimStart());
                   setTray("none");
                 }}
-                className="grid h-12 place-items-center rounded-md bg-white/6 text-[22px] transition hover:bg-white/14"
+                className="grid h-12 place-items-center rounded-md bg-hover/55 text-[22px] transition hover:bg-hover/60"
               >
                 {sticker}
               </button>
@@ -287,7 +287,7 @@ export function ChatComposer({
       )}
 
       {tray === "gift" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[264px] rounded-xl border border-white/10 bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-3 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[264px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-3 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <p className="text-[12.5px] font-semibold text-bright">Send a gift</p>
           <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
             Unlock BT Pro for a friend — 1 month, or a Nitro-style boost bundle.
@@ -326,7 +326,7 @@ export function ChatComposer({
 
       {/* ---------- the pill ---------- */}
       <div
-        className={`composer-pill relative flex items-end gap-1 rounded-[26px] px-2 py-1.5 ring-1 ring-white/10 transition focus-within:ring-blurple/45 ${
+        className={`composer-pill relative flex items-end gap-1 rounded-[26px] px-2 py-1.5 ring-1 ring-subtle transition focus-within:ring-blurple/45 ${
           compact ? "" : "shadow-lg"
         }`}
       >
@@ -338,7 +338,7 @@ export function ChatComposer({
             onClick={() => setTray((t) => (t === "attach" ? "none" : "attach"))}
             aria-label="Attach a file"
             title="Attach a file"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/8 text-muted transition hover:bg-white/14 hover:text-bright"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-hover/55 text-muted transition hover:bg-hover/60 hover:text-bright"
           >
             <PlusIcon width={17} height={17} />
           </button>
@@ -383,7 +383,7 @@ export function ChatComposer({
           maxLength={4000}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className="scroll-thin max-h-44 min-h-8 w-full resize-none self-center bg-transparent px-1 py-1.5 text-[14px] leading-relaxed outline-none placeholder:text-dim"
+          className="scroll-auto max-h-44 min-h-8 w-full resize-none self-center bg-transparent px-1 py-1.5 text-[14px] leading-relaxed outline-none placeholder:text-dim"
         />
 
         <div className="flex shrink-0 items-center gap-0.5 self-center">
@@ -391,7 +391,7 @@ export function ChatComposer({
             onClick={() => setTray((t) => (t === "gift" ? "none" : "gift"))}
             aria-label="Send a gift"
             title="Send a gift"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
           >
             <GiftIcon width={17} height={17} />
           </button>
@@ -399,7 +399,7 @@ export function ChatComposer({
             onClick={() => setTray((t) => (t === "gif" ? "none" : "gif"))}
             aria-label="Send a GIF"
             title="Send a GIF"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
           >
             <GifIcon width={17} height={17} />
           </button>
@@ -407,7 +407,7 @@ export function ChatComposer({
             onClick={() => setTray((t) => (t === "sticker" ? "none" : "sticker"))}
             aria-label="Send a sticker"
             title="Send a sticker"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
           >
             <StickerIcon width={17} height={17} />
           </button>
@@ -415,7 +415,7 @@ export function ChatComposer({
             onClick={() => setTray((t) => (t === "emoji" ? "none" : "emoji"))}
             aria-label="Insert emoji"
             title="Insert emoji"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
           >
             <EmojiIcon width={17} height={17} />
           </button>
@@ -423,7 +423,7 @@ export function ChatComposer({
             onClick={() => insertAtCaret("@")}
             aria-label="Mention someone"
             title="Mention someone (@game and @time work too)"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-white/10 hover:text-bright"
+            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
           >
             <AtIcon width={17} height={17} />
           </button>

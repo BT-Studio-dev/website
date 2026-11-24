@@ -58,13 +58,13 @@ export function Modal({
         ref={panelRef}
         className={`animate-rise relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-line shadow-2xl shadow-black/60 ${
           size === "sm"
-            ? "max-w-sm bg-panel"
+            ? "max-w-sm bg-elevated"
             : size === "lg"
-              ? "max-w-lg bg-panel"
+              ? "max-w-lg bg-elevated"
               : size === "xl"
-                ? "max-w-2xl bg-panel"
-                : "max-w-md bg-panel"
-        } ${tone === "brand" ? "border-white/12 bg-[color-mix(in_oklab,var(--c-panel)_92%,transparent)] backdrop-blur-2xl" : ""}`}
+                ? "max-w-2xl bg-elevated"
+                : "max-w-md bg-elevated"
+        } ${tone === "brand" ? "border-subtle bg-[color-mix(in_oklab,var(--c-elevated)_92%,transparent)] backdrop-blur-2xl" : ""}`}
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line/70 px-5 py-4">
           <div>
@@ -79,9 +79,9 @@ export function Modal({
             <CloseIcon width={15} height={15} />
           </button>
         </header>
-        <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="scroll-auto min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-line/70 bg-abyss/50 px-5 py-3">
+          <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-line/70 bg-sidebar/50 px-5 py-3">
             {footer}
           </footer>
         )}

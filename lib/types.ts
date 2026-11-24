@@ -37,6 +37,8 @@ export type Profile = {
   widgets?: ProfileWidget[];
   user_settings?: UserSettings;
   bt_pro?: boolean;
+  /** Full appearance blob (v5) — mirrors the localStorage cache. */
+  appearance?: Appearance | null;
   /* v4 — timed presence + chat/voice prefs */
   status_expires_at?: string | null;
   icon_pack?: IconPackId;

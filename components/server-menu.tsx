@@ -82,7 +82,7 @@ export function ServerMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         title={`${serverName} — server menu`}
-        className="group flex min-w-0 flex-1 items-center justify-between gap-1 rounded-md px-1 py-1 text-left transition hover:bg-white/8"
+        className="group flex min-w-0 flex-1 items-center justify-between gap-1 rounded-md px-1 py-1 text-left transition hover:bg-hover/60"
       >
         <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tracking-tight text-bright">
           {serverName}

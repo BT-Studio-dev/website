@@ -178,8 +178,8 @@ export function SettingsModal({
   const subtitle = SUBTITLES[section];
 
   return (
-    <div className="fixed inset-0 z-[70] flex bg-void/90 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="User settings">
-      <div className="animate-rise flex h-full w-full overflow-hidden bg-panel shadow-2xl shadow-black/60">
+    <div className="fixed inset-0 z-[70] flex overflow-hidden bg-void/85 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="User settings">
+      <div className="animate-rise shell-gradient flex h-full w-full overflow-hidden bg-elevated shadow-2xl shadow-black/60">
         <SettingsNav
           profile={profile}
           active={section === "edit-profiles" ? "account" : section}
@@ -197,7 +197,7 @@ export function SettingsModal({
           pendingRequests={pendingRequests}
         />
 
-        <main className="relative flex min-w-0 flex-1 flex-col bg-panel">
+        <main className="relative flex min-w-0 flex-1 flex-col bg-surface/60">
           {/* Header */}
           <header className="flex shrink-0 items-start justify-between gap-4 border-b border-line/50 px-8 py-5">
             <div className="min-w-0">
@@ -221,7 +221,7 @@ export function SettingsModal({
             </div>
           </header>
 
-          <div ref={scrollRef} className="scroll-thin min-h-0 flex-1 overflow-y-auto px-8 py-6">
+          <div ref={scrollRef} className="scroll-auto min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-8 py-6">
             <div className="mx-auto max-w-3xl">
               {note && (
                 <p

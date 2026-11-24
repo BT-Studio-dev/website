@@ -51,7 +51,7 @@ export function LandingCta() {
       </Link>
       <Link
         href="/login"
-        className="inline-flex w-full items-center justify-center rounded-xl border border-line bg-panel/70 px-6 py-3 text-sm font-semibold text-bright transition hover:border-muted/40 hover:bg-hover/70 sm:w-auto"
+        className="inline-flex w-full items-center justify-center rounded-xl border border-line bg-elevated/60 px-6 py-3 text-sm font-semibold text-bright transition hover:border-muted/40 hover:bg-hover/70 sm:w-auto"
       >
         I already have one
       </Link>
