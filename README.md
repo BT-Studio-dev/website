@@ -15,6 +15,11 @@ and voice channels — without the weight of a full enterprise chat product.
 **Marketing site (`/`)** — hero, product mock, feature grid, and CTA. The CTA
 adapts to whether you already have a session.
 
+**Themes** — a 2026 ambient system: three drifting light pools (default **deep
+purple → warm amber**) behind translucent glass sidebars, headers and input
+bars. Ten presets plus a **Custom Gradient** two-tone picker, all applied as CSS
+custom properties on `<html>` so nothing re-renders.
+
 **Auth (`/login`, `/signup`)** — email + password via Supabase Auth. Signup
 collects a unique `@username`, a display name, and an accent colour that
 becomes your avatar tint everywhere.
@@ -25,23 +30,43 @@ becomes your avatar tint everywhere.
 | --- | --- |
 | **Server rail Home button** | Home icon with an unread badge sits above the server icons, separated by a divider; `+` and Explore live at the bottom |
 | **Home sidebar** | “Find or start a conversation” search, Friends / Store / Discover tabs, Direct Messages list with avatars, status dots, custom status, unread badges, and the user panel |
-| **Friends dashboard** | Online / All / Pending / Add Friend tabs with search; friend rows with avatar, custom status, Message + More actions (accept/decline/remove) |
+| **Friends dashboard** | Online / All / Pending / Add Friend tabs with search that never overflow or force horizontal scroll; friend rows with avatar, custom status, Message + More actions (accept/decline/remove). *Add Friend* adds an optional **Personalize your request** note (120-char counter) and an **Other Places to Make Friends → Explore Discoverable Servers** card |
 | **Active Now** | Live activity cards (“playing”, “listening”, “editing”, “in voice”) for online friends |
-| **DM thread** | Private 1:1 conversation with grouping, day dividers, optimistic sends, and realtime inserts |
+| **DM thread** | Private 1:1 conversation with grouping, day dividers, a red **NEW** pill at the unread boundary, inline image previews, `@mention` highlights, optimistic sends, and realtime inserts |
+| **DM profile panel** | Collapsible right-hand card: banner, avatar with presence dot, display name + `@handle`, status badges, **Member Since**, a **Playing / Current Activity** card with a live elapsed timer, and a full-width **View Full Profile** button |
+| **Group DMs** | **New Message** with up to 10 members (live search, checkboxes, removable pills, auto group name), **Create Group Message**, Change Icon (upload or curated GIF grid), Edit Group rename, and a `Members—N` sidebar with owner badges |
+| **Composer** | Floating pill with `+` attachments, `@` mention autocomplete (including built-in **`@game`** / **`@time`**), `/` slash commands, gift / GIF / sticker / emoji pickers |
 | **User settings** | Full-screen modal (see below) |
 
 **Workspace (`/channels/:serverId/:channelId`)**
 
 | Surface | What it does |
 | --- | --- |
-| **Server rail** | Emoji server icons, active pill indicator, home button, add-server and explore buttons |
-| **Channel sidebar** | Collapsible **Text** / **Voice** groups, occupant avatars under voice channels, admin-only “+ create” buttons, copy-invite on the header |
+| **Server rail** | Emoji server icons with **initials pills** when no icon is set, active pill indicator, home button, add-server, join-server, discover, and **Download Apps** |
+| **Channel sidebar** | Glass surface, collapsible groups with per-category `+` quick-create, occupant avatars under voice channels, admin-only create buttons, and a **Get Started** onboarding banner in new servers |
+| **Server header dropdown** | Server Boost, Invite to Server / App Directory, **Show All Channels** + **Hide Muted Channels** checkboxes, Notification & Privacy settings, Edit Per-server Profile, Leave Server (soft red), Copy Server Info → submenu. Owners/admins additionally get Server Settings, Insights, Create Channel / Category / Event, Security Actions, Report Raid |
 | **Message feed** | Day dividers, consecutive-message grouping (7 min window), inline markdown (`**bold**`, `*italic*`, `` `code` ``, `~~strike~~`, auto-links), optimistic sends, hover-delete, per-channel search, a `LIVE`/`SYNC` realtime badge |
-| **Composer** | `Enter` sends, `Shift+Enter` newline, 4 000-char cap with counter, typing broadcast |
+| **Composer** | Same floating pill as DMs (attachments, mentions, slash commands, emoji/GIF/sticker), `Enter` sends, `Shift+Enter` newline, typing broadcast |
 | **Member list** | Online/Offline grouping, owner → admin → member ordering, presence dots, accent-tinted avatars, copy-username, “in voice” badges |
-| **User panel** | Avatar, status dot, display name, custom status, working Mute / Deafen toggles, gear → settings |
+| **User panel** | Glass bar; avatar opens the **profile quick-action popover** (mini card, status row with a nested **timed status** flyout — 15 min → Forever —, **10,130 Orbs**, Switch Accounts, Copy User ID), and the mic / headphone chevrons open **device pickers** with input & output volume sliders and a Voice Settings link. Also hosts the Manage Accounts modal |
 | **Voice** | Join/leave voice channels, persisted occupant list, muted state, “Voice connected” card |
 | **Presence** | Status picker (online / idle / do not disturb / offline); auto-idles on tab blur, offline on unload |
+
+### Server creation & discovery
+
+`+` on the rail opens **Create Your Server** (Create My Own, plus Gaming,
+Friends, Study Group, School Club, Local Community, Artists & Creators
+templates that pre-seed text/voice channels, and a *Have an invite already?*
+footer). Creation is two steps — **Tell Us More About Your Server** (friends vs
+club, with a skip link) then **Customize Your Server** (dashed upload picker,
+`Server Name *` prefilled `[Username]'s server`, guidelines notice). The new
+server opens on a **Welcome to [Server]** onboarding screen with six action
+cards, and the creator gets a crown owner badge.
+
+**Join a Server** accepts a bare `hTKzmak` or a full
+`https://btcomms.gg/invite-code`, with sample pills and a Server Discovery
+banner. Codes live in `server_invites` and redeem through
+`redeem_server_invite()` so membership lands in realtime.
 
 ### User Settings (`gear` in the user panel, `Esc` to close)
 
@@ -54,8 +79,8 @@ A full-screen modal with a live-filtering search over every section:
 | **Messaging Permissions** | Who can DM you, message filter level, friend-request notifications |
 | **Notifications** | DMs, server messages, friend requests |
 | **BT Pro / Server Boost / Subscriptions / Gift Inventory / Billing** | Plan, boosts, invoices and gifts |
-| **Appearance** | 7 gradient themes (Midnight, Amethyst, Aurora, Ember, Forest, Mono, Light), dark/light toggle, message density, accent + banner colour, reset |
-| **Voice & Video** | Input/output device pickers, input/output volume sliders, real microphone test via `getUserMedia` + `AudioContext` |
+| **Appearance** | Theme tiles (Light, Dark Charcoal, Midnight, **Amber Dusk**, Custom Gradient, Aurora, Amethyst, Ember, Forest, Mono), two-tone ambient gradient presets + custom picker, base mode, message density, accent + banner colour, **App Icons** grid with limited-time promos, the chat-display switch set (*Show images, videos, and lolcats*, *Show embeds and link previews*, *Show emoji reactions*, *Open threads in split view*, *Preview emoji, mentions, and markdown*, *Automatically convert emoticons to emoji*, *Show send message button*), DM search scope, and **Streamer Mode** with its sub-toggles |
+| **Voice & Video** | Input/output/camera pickers, input, output and **soundboard** volume sliders, **Mic Test** with an animated level meter (real `getUserMedia` + `AnalyserNode`, synthetic fallback when permission is denied), Input Profiles (Voice Isolation / Studio / Custom), **Noise Suppression (Krisp)**, Echo Cancellation, Automatic Gain, Push to Talk + shortcut, camera selector with **Test Video** preview, *Show Stream Previews*, call sounds with **Preview Sound** toggles (Deafen/Undeafen/Mute/Unmute/Camera), and Entrance Sound server selector + custom file |
 | **Accessibility** | Reduced motion, reduced saturation, font scaling |
 | **Authorized Apps** | Connected apps and sessions |
 | **Edit Profiles** | Opens the full profile studio (below) |
@@ -144,14 +169,25 @@ dm_channels     id · user_a < user_b · pair_key (unique) · created_at · last
 direct_messages id · dm_channel_id → dm_channels · author_id · content
                 created_at · edited_at · read_at
 blocked_users   (blocker_id, blocked_id) · created_at
+group_dms       id · owner_id · name · icon_url · created_at · last_message_at
+group_dm_members (group_id, user_id) · joined_at · last_read_at
+group_messages  id · group_id → group_dms · author_id · content · created_at
+server_invites  code (pk) · server_id → servers · created_by · expires_at
+                max_uses · uses
 ```
+
+Timed presence adds `status_expires_at` to `profiles`; a lapsed timer reads as
+Online through `effective_status()`, and `expire_stale_statuses()` sweeps the
+row. Group messages are capped at 10 members by a trigger on
+`group_dm_members`, and RLS is scoped through `is_group_member()`.
 
 Profile-card columns on `profiles`: `banner_url`, `theme_primary`,
 `theme_secondary`, `avatar_decoration`, `profile_effect`, `name_style`,
 `nameplate`, `pronouns`, `server_tag`, `connections` (JSONB), `widgets` (JSONB),
 `user_settings` (JSONB), `bt_pro`.
 
-RPCs (all `security definer`): `ensure_dm_channel`, `send_friend_request`,
+RPCs (all `security definer`): `redeem_server_invite`, `create_server_invite`,
+`ensure_dm_channel`, `send_friend_request`,
 `respond_friend_request`, `remove_friend`, plus the `is_dm_participant`,
 `is_blocked_between`, `is_friend`, `shares_server`, `has_mutual_friend`,
 `can_dm_from` and `can_friend_request_from` helpers.
@@ -247,7 +283,7 @@ modal (Appearance + Edit Profiles are fully live against local state).
 Run the demo-store logic tests:
 
 ```bash
-node --experimental-strip-types lib/demo.test.mjs   # 29 checks
+node --experimental-strip-types lib/demo.test.mjs   # 76 checks
 ```
 
 ---
@@ -259,7 +295,8 @@ app/
   page.tsx                     marketing site
   login/ signup/               auth screens
   channels/                    workspace routes (server + channel)
-  channels/home/               Home / DMs (@me rewritten here)
+  channels/home/               Home / DMs (@me rewritten here
+                               by next.config.ts rewrites)
   auth/callback/ signout/      session endpoints
   globals.css                  Tailwind v4 theme + design tokens
 components/
@@ -267,7 +304,17 @@ components/
   comms-app.tsx                live workspace shell (Supabase-backed)
   home-sidebar.tsx             "Find or start a conversation" + DM list
   friends-view.tsx             friend tabs, requests, Active Now panel
-  dm-view.tsx                  private 1:1 thread
+  dm-view.tsx                  private 1:1 + group thread
+  dm-profile-panel.tsx         right-hand recipient card
+  chat-composer.tsx            floating pill composer (attachments, /, @)
+  user-menu.tsx                avatar quick-action + timed status
+  user-panel.tsx               voice device popovers, mute/deafen
+  server-menu.tsx              server header dropdown
+  server-modals.tsx            create / wizard / join / onboarding
+  group-dm-modals.tsx          New Message + Change Icon
+  manage-accounts.tsx          account switcher
+  ui/popover.tsx               shared menu surface + submenus
+  loading-screen.tsx           rotating tips + timeout fallback
   profile/                     profile card, Edit Profile studio, widgets
   settings/                    User Settings modal + panels
   server-rail.tsx              server icons + Home button
@@ -277,7 +324,14 @@ components/
   demo/                        offline demo mirror
 lib/
   supabase/                    browser + server clients
-  appearance.tsx               gradient themes + density/motion context
+  appearance.tsx               appearance context (applies CSS variables)
+  themes.ts                    theme data + ambient gradient palettes
+  presence.ts                  timed status helpers
+  groups.ts                    group DM data access
+  chat-features.ts             mentions, slash commands, emoji, media
+  naming.ts                    initials pills + auto group names
+  server-templates.ts          creation templates + intents
+  icon-packs.ts                app icon packs (incl. limited promos)
   queries.ts                   typed data access
   social.ts                    friends, DMs, profile/auth mutations
   profile-cosmetics.ts         decorations, effects, name styles, games
