@@ -11,9 +11,12 @@ import {
 import { Avatar } from "@/components/avatar";
 import { MessageContent } from "@/components/message-content";
 import { HashIcon, TrashIcon, UsersIcon, SearchIcon } from "@/components/icons";
-import { ChatComposer } from "@/components/chat-composer";
+import { ChatComposer, type ComposerApi } from "@/components/chat-composer";
+import { AttachmentGrid } from "@/components/attachments";
+import { UploadDropzone } from "@/components/upload-dropzone";
+import { normalizeAttachments, uploadAttachments } from "@/lib/attachments";
 import { formatDayLabel, formatTimestamp, sameDay, shouldGroup, formatTime } from "@/lib/format";
-import type { Channel, Message, Profile, Server, ServerMember } from "@/lib/types";
+import type { Attachment, Channel, Message, Profile, Server, ServerMember } from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const MAX_LENGTH = 4000;
@@ -51,7 +54,7 @@ export function MessageFeed({
   const [search, setSearch] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const composerApi = useRef<ComposerApi | null>(null);
   const pinnedToBottom = useRef(true);
 
   const membersById = useMemo(() => {
@@ -77,6 +80,7 @@ export function MessageFeed({
     return messages.filter(
       (m) =>
         m.content.toLowerCase().includes(needle) ||
+        (m.attachments ?? []).some((a) => a.name.toLowerCase().includes(needle)) ||
         (m.author?.display_name ?? m.system_author ?? "").toLowerCase().includes(needle),
     );
   }, [messages, search]);
@@ -115,7 +119,11 @@ export function MessageFeed({
           filter: `channel_id=eq.${channel.id}`,
         },
         async (payload) => {
-          const incoming = payload.new as Message;
+          // Raw row: normalize jsonb attachments so files render live.
+          const incoming = {
+            ...(payload.new as Message),
+            attachments: normalizeAttachments((payload.new as Message).attachments),
+          };
           setMessages((prev) => {
             if (prev.some((m) => m.id === incoming.id)) return prev;
             const optimisticIndex = prev.findIndex(
@@ -173,7 +181,10 @@ export function MessageFeed({
           filter: `channel_id=eq.${channel.id}`,
         },
         (payload) => {
-          const updated = payload.new as Message;
+          const updated = {
+            ...(payload.new as Message),
+            attachments: normalizeAttachments((payload.new as Message).attachments),
+          };
           setMessages((prev) =>
             prev.map((m) => (m.id === updated.id ? { ...m, ...updated, author: m.author } : m)),
           );
@@ -251,9 +262,9 @@ export function MessageFeed({
   }
 
   // ---- Sending ------------------------------------------------------------
-  async function sendMessage(explicit?: string) {
+  async function sendMessage(explicit?: string, files: Attachment[] = []) {
     const content = (explicit ?? "").trim();
-    if (!content || sending) return;
+    if ((!content && files.length === 0) || sending) return;
     if (content.length > MAX_LENGTH) {
       setError(`Messages are capped at ${MAX_LENGTH} characters.`);
       return;
@@ -271,6 +282,7 @@ export function MessageFeed({
       content,
       created_at: new Date().toISOString(),
       edited_at: null,
+      attachments: files,
       author: {
         id: profile.id,
         username: profile.username,
@@ -287,9 +299,9 @@ export function MessageFeed({
 
     const { data, error: insertError } = await supabase
       .from("messages")
-      .insert({ channel_id: channel.id, author_id: profile.id, content })
+      .insert({ channel_id: channel.id, author_id: profile.id, content, attachments: files })
       .select(
-        `id, channel_id, author_id, system_author, content, created_at, edited_at,
+        `id, channel_id, author_id, system_author, content, created_at, edited_at, attachments,
          author:profiles(id, username, display_name, avatar_url, accent_color)`,
       )
       .single<Message>();
@@ -311,7 +323,7 @@ export function MessageFeed({
     }
 
     setSending(false);
-    inputRef.current?.focus();
+    composerApi.current?.focus();
   }
 
   async function deleteMessage(id: string) {
@@ -321,17 +333,17 @@ export function MessageFeed({
     if (deleteError) setMessages(snapshot);
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      void sendMessage();
-    }
-  }
-
   const typingNames = Object.values(typing).map((t) => t.name);
 
   return (
     <section className="ambient-stage flex min-w-0 flex-1 flex-col">
+      <UploadDropzone
+        target={`#${channel.name}`}
+        onFiles={(files) => {
+          composerApi.current?.addFiles(files);
+          composerApi.current?.focus();
+        }}
+      >
       {/* Channel header */}
       <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2 overflow-hidden border-b px-4">
         <HashIcon width={18} height={18} className="shrink-0 text-muted" />
@@ -530,10 +542,12 @@ export function MessageFeed({
                   )}
 
                   <div className="mt-0.5">
-                    <MessageContent
-                    content={message.content}
-                    selfId={profile.id}
-                  />
+                    {message.content && (
+                      <MessageContent content={message.content} selfId={profile.id} />
+                    )}
+                    {(message.attachments ?? []).length > 0 && (
+                      <AttachmentGrid attachments={message.attachments ?? []} />
+                    )}
                     {isPending && (
                       <span className="mt-0.5 block text-[10px] text-dim">Sending…</span>
                     )}
@@ -574,12 +588,18 @@ export function MessageFeed({
         )}
 
         <ChatComposer
+          apiRef={composerApi}
           placeholder={`Message #${channel.name}`}
           ariaLabel={`Message #${channel.name}`}
-          onSubmit={(content) => {
+          onSubmit={(content, files) => {
             setDraft(content);
-            void sendMessage(content);
+            void sendMessage(content, files);
           }}
+          onUpload={(files) => uploadAttachments(supabase, profile.id, files)}
+          onCreateThread={() =>
+            setError("Threads are coming soon — reply in the channel for now.")
+          }
+          onUseApps={() => setError("Apps and integrations are coming soon.")}
           members={members.map((m) => m.profile).filter(Boolean) as NonNullable<Message["author"]>[]}
           selfId={profile.id}
           autoEmoticons={profile.user_settings?.emoticonToEmoji ?? true}
@@ -605,6 +625,7 @@ export function MessageFeed({
           )}
         </div>
       </div>
+      </UploadDropzone>
     </section>
   );
 }

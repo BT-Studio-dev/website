@@ -118,8 +118,12 @@ export function EditProfileModal({
     draft: ProfileDraft,
     serverProfiles: Record<string, ServerProfile>,
   ) => void | Promise<void>;
-  onUploadAvatar?: (file: File) => Promise<string | null>;
-  onUploadBanner?: (file: File) => Promise<string | null>;
+  onUploadAvatar?: (
+    file: File,
+  ) => Promise<string | null | { url: string | null; error: string | null }>;
+  onUploadBanner?: (
+    file: File,
+  ) => Promise<string | null | { url: string | null; error: string | null }>;
 }) {
   const initial = useMemo(() => draftFromProfile(profile), [profile]);
   const [draft, setDraft] = useState<ProfileDraft>(initial);
@@ -209,37 +213,52 @@ export function EditProfileModal({
     return Boolean(pro) && !proPreview;
   }
 
+  /** Uploads return the stored URL, or a sentence explaining what went wrong. */
   async function handleAvatar(file: File) {
     if (!onUploadAvatar) {
-      const url = URL.createObjectURL(file);
-      set("avatar_url", url);
+      set("avatar_url", URL.createObjectURL(file));
       return;
     }
     setUploading("avatar");
-    const url = await onUploadAvatar(file);
-    setUploading(null);
-    if (url) {
-      set("avatar_url", url);
-      setStatus("Avatar uploaded.");
-    } else {
-      setStatus("Avatar upload failed.");
+    setStatus(null);
+    try {
+      const result = await onUploadAvatar(file);
+      const url = typeof result === "string" ? result : result?.url ?? null;
+      const error = typeof result === "string" ? null : result?.error ?? null;
+      if (url) {
+        set("avatar_url", url);
+        setStatus("Avatar uploaded — save to apply.");
+      } else {
+        setStatus(error ?? "Avatar upload failed. Try a smaller PNG or JPEG.");
+      }
+    } catch (err) {
+      setStatus(err instanceof Error ? `Avatar upload failed: ${err.message}` : "Avatar upload failed.");
+    } finally {
+      setUploading(null);
     }
   }
 
   async function handleBanner(file: File) {
     if (!onUploadBanner) {
-      const url = URL.createObjectURL(file);
-      set("banner_url", url);
+      set("banner_url", URL.createObjectURL(file));
       return;
     }
     setUploading("banner");
-    const url = await onUploadBanner(file);
-    setUploading(null);
-    if (url) {
-      set("banner_url", url);
-      setStatus("Banner uploaded.");
-    } else {
-      setStatus("Banner upload failed.");
+    setStatus(null);
+    try {
+      const result = await onUploadBanner(file);
+      const url = typeof result === "string" ? result : result?.url ?? null;
+      const error = typeof result === "string" ? null : result?.error ?? null;
+      if (url) {
+        set("banner_url", url);
+        setStatus("Banner uploaded — save to apply.");
+      } else {
+        setStatus(error ?? "Banner upload failed. Try a smaller PNG or JPEG.");
+      }
+    } catch (err) {
+      setStatus(err instanceof Error ? `Banner upload failed: ${err.message}` : "Banner upload failed.");
+    } finally {
+      setUploading(null);
     }
   }
 

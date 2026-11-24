@@ -76,6 +76,16 @@ export type MessageAuthor = {
   custom_status_emoji?: string | null;
 };
 
+/** A file uploaded to the `chat-attachments` bucket (v5). */
+export type Attachment = {
+  url: string;
+  name: string;
+  /** MIME type, e.g. `image/png`. */
+  type: string;
+  /** Bytes. */
+  size: number;
+};
+
 export type Message = {
   id: string;
   channel_id: string;
@@ -84,6 +94,7 @@ export type Message = {
   content: string;
   created_at: string;
   edited_at: string | null;
+  attachments?: Attachment[] | null;
   author?: MessageAuthor | null;
 };
 
@@ -225,6 +236,7 @@ export type DirectMessage = {
   created_at: string;
   edited_at: string | null;
   read_at: string | null;
+  attachments?: Attachment[] | null;
   author?: MessageAuthor | null;
 };
 

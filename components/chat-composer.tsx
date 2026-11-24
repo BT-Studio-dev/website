@@ -3,15 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import {
+  AppsIcon,
   AtIcon,
   CloseIcon,
   EmojiIcon,
+  FileIcon,
   GifIcon,
   GiftIcon,
+  ImageIcon,
   PlusIcon,
   SendIcon,
   SlashIcon,
   StickerIcon,
+  ThreadIcon,
+  TrashIcon,
+  UploadCloudIcon,
 } from "@/components/icons";
 import {
   applyEmoticons,
@@ -23,19 +29,42 @@ import {
   SLASH_COMMANDS,
   type MentionOption,
 } from "@/lib/chat-features";
-import type { MessageAuthor } from "@/lib/types";
+import {
+  ATTACHMENT_ACCEPT,
+  MAX_ATTACHMENTS_PER_MESSAGE,
+  formatFileSize,
+  isImageAttachment,
+  isVideoAttachment,
+  previewUrl,
+} from "@/lib/attachments";
+import type { Attachment, MessageAuthor } from "@/lib/types";
 
 /**
  * The floating pill composer shared by the DM feed and the channel feed.
  *
- * `+` opens an attachment tray, `@` opens mention autocomplete (including the
- * built-in `@game` / `@time` tags), `/` opens slash commands, and the right
- * cluster holds gift / GIF / sticker / emoji buttons.
+ * `+` opens the attachment menu (Upload a File / Create Thread / Use Apps),
+ * `@` opens mention autocomplete (including `@game` / `@time`), `/` opens slash
+ * commands, and the right cluster holds gift / GIF / sticker / emoji.
+ *
+ * Files chosen, pasted or dropped are uploaded right away so the pending tray
+ * can show real thumbnails; sending just hands the descriptors to the feed.
  */
+
+/** Imperative API so the feed's drop overlay can push files into the tray. */
+export type ComposerApi = {
+  addFiles: (files: File[] | FileList) => void;
+  focus: () => void;
+};
+
+export type UploadResult = { attachments: Attachment[]; errors: string[] };
+
 export function ChatComposer({
   placeholder,
   ariaLabel,
   onSubmit,
+  onUpload,
+  onCreateThread,
+  onUseApps,
   members = [],
   selfId,
   autoEmoticons = true,
@@ -43,10 +72,15 @@ export function ChatComposer({
   showSendButton = true,
   leftSlot,
   compact,
+  apiRef,
 }: {
   placeholder: string;
   ariaLabel: string;
-  onSubmit: (content: string) => void;
+  onSubmit: (content: string, attachments: Attachment[]) => void;
+  /** Uploads files and returns stored descriptors. */
+  onUpload?: (files: File[]) => Promise<UploadResult>;
+  onCreateThread?: () => void;
+  onUseApps?: () => void;
   members?: MessageAuthor[];
   selfId?: string;
   autoEmoticons?: boolean;
@@ -55,13 +89,20 @@ export function ChatComposer({
   /** Extra control rendered inside the pill, left of the `+`. */
   leftSlot?: React.ReactNode;
   compact?: boolean;
+  /** Filled with an imperative handle (used by the drag-and-drop overlay). */
+  apiRef?: React.MutableRefObject<ComposerApi | null>;
 }) {
   const [value, setValue] = useState("");
   const [caret, setCaret] = useState(0);
   const [tray, setTray] = useState<"none" | "attach" | "emoji" | "gif" | "sticker" | "gift">("none");
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [pending, setPending] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const mentionQuery = useMemo(
     () => (value.trimStart().startsWith("/") ? activeSlashQuery(value, caret) : activeMentionQuery(value, caret)),
@@ -109,17 +150,73 @@ export function ChatComposer({
     node.style.height = `${Math.min(node.scrollHeight, 176)}px`;
   }, [value]);
 
+  /* ------------------------------ uploading ----------------------------- */
+
+  async function addFiles(files: File[] | FileList) {
+    const list = Array.from(files);
+    if (list.length === 0) return;
+    const room = MAX_ATTACHMENTS_PER_MESSAGE - pending.length - uploading;
+    if (room <= 0) {
+      setUploadError(`You can attach up to ${MAX_ATTACHMENTS_PER_MESSAGE} files per message.`);
+      return;
+    }
+    const batch = list.slice(0, room);
+    setUploadError(null);
+
+    // No uploader wired (demo / preview) — fall back to local object URLs so
+    // the tray still previews the file.
+    if (!onUpload) {
+      setPending((prev) => [
+        ...prev,
+        ...batch.map((file) => ({
+          url: previewUrl(file),
+          name: file.name,
+          type: file.type || "application/octet-stream",
+          size: file.size,
+        })),
+      ]);
+      return;
+    }
+
+    setUploading((n) => n + batch.length);
+    const result = await onUpload(batch);
+    setUploading((n) => Math.max(0, n - batch.length));
+    if (result.attachments.length > 0) {
+      setPending((prev) => [...prev, ...result.attachments].slice(0, MAX_ATTACHMENTS_PER_MESSAGE));
+    }
+    if (result.errors.length > 0) setUploadError(result.errors[0]);
+    textareaRef.current?.focus();
+  }
+
+  useEffect(() => {
+    if (!apiRef) return;
+    apiRef.current = {
+      addFiles: (files) => void addFiles(files),
+      focus: () => textareaRef.current?.focus(),
+    };
+    return () => {
+      apiRef.current = null;
+    };
+  });
+
+  /* ------------------------------- sending ------------------------------ */
+
   function submit() {
     let content = value.trim();
-    if (!content && attachments.length === 0) return;
-    if (autoEmoticons) content = applyEmoticons(content);
-    if (previewMarkup) content = applyShortcodes(content);
-    const full = [content, ...attachments].filter(Boolean).join(" ");
-    onSubmit(full);
+    if (!content && pending.length === 0) return;
+    if (content) {
+      if (autoEmoticons) content = applyEmoticons(content);
+      if (previewMarkup) content = applyShortcodes(content);
+    }
+    onSubmit(content, pending);
     setValue("");
-    setAttachments([]);
+    setPending([]);
     setTray("none");
-    textareaRef.current?.focus();
+    setUploadError(null);
+    requestAnimationFrame(() => {
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      textareaRef.current?.focus();
+    });
   }
 
   function insertAtCaret(text: string) {
@@ -145,37 +242,75 @@ export function ChatComposer({
     insertAtCaret(option.insert.endsWith(" ") ? option.insert : `${option.insert} `);
   }
 
+  /* ------------------------------- pasting ------------------------------ */
+
+  function handlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind !== "file") continue;
+      const file = item.getAsFile();
+      if (file) files.push(file);
+    }
+    if (files.length > 0) {
+      // Keep pasted text intact; only hijack the paste when it carries files.
+      event.preventDefault();
+      void addFiles(files);
+    }
+  }
+
+  const busy = uploading > 0;
+  const canSend = Boolean(value.trim()) || pending.length > 0;
+
   const attachTray = (
-    <div className="animate-rise absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+    <div className="animate-rise absolute bottom-full left-0 z-40 mb-2 w-60 overflow-hidden rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] py-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
       <p className="px-2.5 pt-1 pb-1 text-[10px] font-bold tracking-[0.14em] text-dim uppercase">
         Attach
       </p>
-      {[
-        { label: "Upload a file", icon: <PlusIcon width={14} height={14} /> },
-        { label: "Create a poll", icon: <GifIcon width={14} height={14} /> },
-        { label: "Send a sticker", icon: <StickerIcon width={14} height={14} /> },
-        { label: "Start a thread", icon: <SlashIcon width={14} height={14} /> },
-      ].map((item) => (
-        <button
-          key={item.label}
-          onClick={() => {
-            if (item.label === "Upload a file") fileRef.current?.click();
-            setTray("none");
-          }}
-          className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
-        >
-          {item.icon}
-          {item.label}
-        </button>
-      ))}
+      <button
+        type="button"
+        onClick={() => {
+          fileRef.current?.click();
+          setTray("none");
+        }}
+        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+      >
+        <UploadCloudIcon width={15} height={15} />
+        Upload a File
+        <span className="ml-auto text-[10px] text-dim opacity-80">⌘U</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setTray("none");
+          onCreateThread?.();
+        }}
+        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+      >
+        <ThreadIcon width={15} height={15} />
+        Create Thread
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setTray("none");
+          onUseApps?.();
+        }}
+        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+      >
+        <AppsIcon width={15} height={15} />
+        Use Apps
+      </button>
     </div>
   );
 
   return (
-    <div className="relative shrink-0 px-3 pb-3 md:px-4 md:pb-4">
+    <div ref={rootRef} className="relative min-w-0 shrink-0 px-3 pb-3 md:px-4 md:pb-4">
       {/* autocomplete above the pill */}
       {showAutocomplete && (
-        <div className="animate-rise absolute bottom-full left-3 z-30 mb-1 max-h-64 w-[min(420px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-1 shadow-2xl shadow-black/60 backdrop-blur-2xl scroll-auto">
+        <div className="animate-rise scroll-auto absolute bottom-full left-3 z-40 mb-1 max-h-64 w-[min(420px,calc(100%-2rem))] overflow-y-auto rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] p-1 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <p className="px-2 py-1 text-[10px] font-bold tracking-[0.14em] text-dim uppercase">
             {isSlash ? "Commands" : "Members"}
           </p>
@@ -217,7 +352,7 @@ export function ChatComposer({
 
       {/* emoji picker */}
       {tray === "emoji" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[298px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="animate-rise absolute bottom-full right-3 z-40 mb-2 w-[298px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <div className="scroll-auto max-h-56 overflow-y-auto">
             {EMOJI_PALETTE.map((group) => (
               <div key={group.group} className="mb-1.5">
@@ -243,7 +378,7 @@ export function ChatComposer({
 
       {/* gif / sticker / gift trays */}
       {tray === "gif" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[300px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="animate-rise absolute bottom-full right-3 z-40 mb-2 w-[300px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <p className="px-1 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
             Trending GIFs
           </p>
@@ -265,7 +400,7 @@ export function ChatComposer({
       )}
 
       {tray === "sticker" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[250px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="animate-rise absolute bottom-full right-3 z-40 mb-2 w-[250px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] p-2 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <p className="px-1 pb-1.5 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">
             BT Comms Stickers
           </p>
@@ -287,7 +422,7 @@ export function ChatComposer({
       )}
 
       {tray === "gift" && (
-        <div className="animate-rise absolute bottom-full right-3 z-30 mb-2 w-[264px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-void)_94%,transparent)] p-3 shadow-2xl shadow-black/60 backdrop-blur-2xl">
+        <div className="animate-rise absolute bottom-full right-3 z-40 mb-2 w-[264px] rounded-xl border border-subtle bg-[color-mix(in_oklab,var(--c-input)_94%,transparent)] p-3 shadow-2xl shadow-black/60 backdrop-blur-2xl">
           <p className="text-[12.5px] font-semibold text-bright">Send a gift</p>
           <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
             Unlock BT Pro for a friend — 1 month, or a Nitro-style boost bundle.
@@ -304,41 +439,88 @@ export function ChatComposer({
         </div>
       )}
 
-      {attachments.length > 0 && (
-        <div className="mb-1.5 flex flex-wrap gap-1.5">
-          {attachments.map((url) => (
-            <span
-              key={url}
-              className="flex items-center gap-1 rounded-full border border-line bg-void/70 px-2 py-0.5 text-[10.5px] text-muted"
-            >
-              {url.split("/").pop()}
-              <button
-                onClick={() => setAttachments((prev) => prev.filter((u) => u !== url))}
-                aria-label="Remove attachment"
-                className="text-dim hover:text-rose"
-              >
-                <CloseIcon width={10} height={10} />
+      {/* ---------- pending attachment tray ---------- */}
+      {(pending.length > 0 || busy || uploadError) && (
+        <div className="mb-1.5 rounded-xl border border-subtle bg-elevated/70 p-2 backdrop-blur-md">
+          {uploadError && (
+            <p role="alert" className="mb-1.5 flex items-start justify-between gap-2 px-1 text-[11.5px] text-rose">
+              <span className="min-w-0 flex-1">{uploadError}</span>
+              <button onClick={() => setUploadError(null)} aria-label="Dismiss" className="shrink-0 text-dim hover:text-rose">
+                <CloseIcon width={11} height={11} />
               </button>
-            </span>
-          ))}
+            </p>
+          )}
+
+          <div className="scroll-auto flex max-h-[152px] gap-2 overflow-x-auto overflow-y-hidden pb-0.5">
+            {pending.map((attachment) => (
+              <PendingCard
+                key={attachment.url}
+                attachment={attachment}
+                onRemove={() => setPending((prev) => prev.filter((a) => a.url !== attachment.url))}
+              />
+            ))}
+
+            {Array.from({ length: uploading }).map((_, index) => (
+              <div
+                key={`uploading-${index}`}
+                className="grid h-[104px] w-[152px] shrink-0 animate-pulse place-items-center rounded-lg border border-subtle bg-hover/40"
+              >
+                <span className="text-[10.5px] font-medium text-dim">Uploading…</span>
+              </div>
+            ))}
+
+            {pending.length + uploading < MAX_ATTACHMENTS_PER_MESSAGE && (
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                aria-label="Add more files"
+                className="grid h-[104px] w-[72px] shrink-0 place-items-center rounded-lg border border-dashed border-subtle text-dim transition hover:border-blurple/60 hover:text-bright"
+              >
+                <PlusIcon width={18} height={18} />
+              </button>
+            )}
+          </div>
+
+          <p className="px-1 pt-1 text-[10px] text-dim">
+            {pending.length} of {MAX_ATTACHMENTS_PER_MESSAGE} files · click a thumbnail&apos;s trash icon to remove
+          </p>
         </div>
       )}
 
       {/* ---------- the pill ---------- */}
       <div
-        className={`composer-pill relative flex items-end gap-1 rounded-[26px] px-2 py-1.5 ring-1 ring-subtle transition focus-within:ring-blurple/45 ${
-          compact ? "" : "shadow-lg"
-        }`}
+        className={`composer-pill relative flex min-w-0 items-end gap-1 rounded-[26px] px-2 py-1.5 ring-1 transition focus-within:ring-blurple/45 ${
+          dragging ? "ring-2 ring-blurple" : "ring-subtle"
+        } ${compact ? "" : "shadow-lg"}`}
+        onDragOver={(event) => {
+          if (event.dataTransfer?.types?.includes("Files")) {
+            event.preventDefault();
+            setDragging(true);
+          }
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          if (event.dataTransfer?.files?.length) {
+            event.preventDefault();
+            setDragging(false);
+            void addFiles(event.dataTransfer.files);
+          }
+        }}
       >
         {leftSlot}
 
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             type="button"
             onClick={() => setTray((t) => (t === "attach" ? "none" : "attach"))}
-            aria-label="Attach a file"
-            title="Attach a file"
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-hover/55 text-muted transition hover:bg-hover/60 hover:text-bright"
+            aria-label="Upload a file or create a thread"
+            aria-expanded={tray === "attach"}
+            title="Upload a file"
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition ${
+              tray === "attach"
+                ? "bg-blurple text-white"
+                : "bg-hover/55 text-muted hover:bg-hover/60 hover:text-bright"
+            }`}
           >
             <PlusIcon width={17} height={17} />
           </button>
@@ -346,12 +528,13 @@ export function ChatComposer({
           <input
             ref={fileRef}
             type="file"
-            accept="image/*"
+            accept={ATTACHMENT_ACCEPT}
+            multiple
+            aria-label="Choose files to upload"
             className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) setAttachments((prev) => [...prev, URL.createObjectURL(file)]);
-              e.target.value = "";
+            onChange={(event) => {
+              if (event.target.files?.length) void addFiles(event.target.files);
+              event.target.value = "";
             }}
           />
         </div>
@@ -364,14 +547,25 @@ export function ChatComposer({
             setCaret(e.target.selectionStart);
           }}
           onSelect={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart)}
+          onPaste={handlePaste}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
               e.preventDefault();
               if (showAutocomplete && mentionOptions[0]) {
                 isSlash ? pickSlash(mentionOptions[0]) : insertAtCaret(mentionOptions[0].insert);
                 return;
               }
               submit();
+            }
+            // Discord parity: → at the very end of the message sends, ← behaves
+            // normally. Both Enter and the send button dispatch through submit().
+            if (e.key === "ArrowRight" && value.length > 0) {
+              const el = e.currentTarget;
+              if (el.selectionStart === value.length && el.selectionEnd === value.length) {
+                e.preventDefault();
+                submit();
+                return;
+              }
             }
             if (e.key === "Tab" && showAutocomplete && mentionOptions[0]) {
               e.preventDefault();
@@ -383,56 +577,45 @@ export function ChatComposer({
           maxLength={4000}
           placeholder={placeholder}
           aria-label={ariaLabel}
-          className="scroll-auto max-h-44 min-h-8 w-full resize-none self-center bg-transparent px-1 py-1.5 text-[14px] leading-relaxed outline-none placeholder:text-dim"
+          className="scroll-auto max-h-44 min-h-8 w-full min-w-0 flex-1 resize-none self-center bg-transparent px-1 py-1.5 text-[14px] leading-relaxed text-bright outline-none placeholder:text-dim"
         />
 
         <div className="flex shrink-0 items-center gap-0.5 self-center">
-          <button
-            onClick={() => setTray((t) => (t === "gift" ? "none" : "gift"))}
-            aria-label="Send a gift"
-            title="Send a gift"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
-          >
+          <IconButton label="Send a gift" onClick={() => setTray((t) => (t === "gift" ? "none" : "gift"))} active={tray === "gift"}>
             <GiftIcon width={17} height={17} />
-          </button>
-          <button
-            onClick={() => setTray((t) => (t === "gif" ? "none" : "gif"))}
-            aria-label="Send a GIF"
-            title="Send a GIF"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
-          >
+          </IconButton>
+          <IconButton label="Send a GIF" onClick={() => setTray((t) => (t === "gif" ? "none" : "gif"))} active={tray === "gif"}>
             <GifIcon width={17} height={17} />
-          </button>
-          <button
+          </IconButton>
+          <IconButton
+            label="Send a sticker"
             onClick={() => setTray((t) => (t === "sticker" ? "none" : "sticker"))}
-            aria-label="Send a sticker"
-            title="Send a sticker"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
+            active={tray === "sticker"}
+            className="hidden sm:grid"
           >
             <StickerIcon width={17} height={17} />
-          </button>
-          <button
+          </IconButton>
+          <IconButton
+            label="Insert emoji"
             onClick={() => setTray((t) => (t === "emoji" ? "none" : "emoji"))}
-            aria-label="Insert emoji"
-            title="Insert emoji"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
+            active={tray === "emoji"}
           >
             <EmojiIcon width={17} height={17} />
-          </button>
-          <button
-            onClick={() => insertAtCaret("@")}
-            aria-label="Mention someone"
-            title="Mention someone (@game and @time work too)"
-            className="grid h-7 w-7 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
-          >
+          </IconButton>
+          <IconButton label="Mention someone" onClick={() => insertAtCaret("@")} className="hidden sm:grid">
             <AtIcon width={17} height={17} />
-          </button>
+          </IconButton>
+          <IconButton label="Use apps" onClick={() => onUseApps?.()} className="hidden lg:grid">
+            <AppsIcon width={16} height={16} />
+          </IconButton>
           {showSendButton && (
             <button
+              type="button"
               onClick={submit}
-              disabled={!value.trim() && attachments.length === 0}
+              disabled={!canSend || busy}
               aria-label="Send message"
-              className="ml-0.5 grid h-8 w-8 place-items-center rounded-full bg-blurple text-white transition hover:bg-blurple-soft disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-dim"
+              title="Send message"
+              className="ml-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-blurple text-white transition hover:bg-blurple-soft disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-dim"
             >
               <SendIcon width={15} height={15} />
             </button>
@@ -440,12 +623,91 @@ export function ChatComposer({
         </div>
       </div>
 
-      <p className="mt-1 px-3 text-[10px] text-dim">
+      <p className="mt-1 truncate px-3 text-[10px] text-dim">
         <span className="font-semibold">Enter</span> to send ·{" "}
-        <span className="font-semibold">Shift + Enter</span> for a new line ·{" "}
-        <span className="font-semibold">@</span> mentions ·{" "}
-        <span className="font-semibold">/</span> commands
+        <span className="font-semibold">Shift + Enter</span> new line ·{" "}
+        <span className="font-semibold">Paste</span> or drop images to attach
       </p>
+    </div>
+  );
+}
+
+function IconButton({
+  label,
+  onClick,
+  active,
+  className = "",
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      aria-pressed={active}
+      className={`grid h-7 w-7 shrink-0 place-items-center rounded-md transition ${
+        active ? "bg-hover/60 text-bright" : "text-muted hover:bg-hover/60 hover:text-bright"
+      } ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** A removable thumbnail card in the pending tray. */
+function PendingCard({
+  attachment,
+  onRemove,
+}: {
+  attachment: Attachment;
+  onRemove: () => void;
+}) {
+  const image = isImageAttachment(attachment);
+  const video = isVideoAttachment(attachment);
+  const [broken, setBroken] = useState(false);
+
+  return (
+    <div className="group relative h-[104px] w-[152px] shrink-0 overflow-hidden rounded-lg border border-subtle bg-input/60">
+      {image && !broken ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={attachment.url}
+          alt={attachment.name}
+          onError={() => setBroken(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : video && !broken ? (
+        <video src={attachment.url} muted className="h-full w-full object-cover" />
+      ) : (
+        <div className="grid h-full w-full place-items-center gap-1 px-2 text-center">
+          <FileIcon width={20} height={20} className="text-muted" />
+          <span className="line-clamp-2 text-[10px] leading-tight text-dim">{attachment.name}</span>
+        </div>
+      )}
+
+      <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-1 bg-gradient-to-t from-black/80 to-transparent px-1.5 py-1">
+        <ImageIcon width={10} height={10} className="shrink-0 text-white/70" />
+        <span className="truncate text-[9.5px] font-medium text-white/90">
+          {formatFileSize(attachment.size)}
+        </span>
+      </span>
+
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${attachment.name}`}
+        title="Remove"
+        className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/70 text-white/90 opacity-0 transition group-hover:opacity-100 hover:bg-rose hover:text-white focus:opacity-100"
+      >
+        <TrashIcon width={12} height={12} />
+      </button>
     </div>
   );
 }

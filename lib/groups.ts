@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { DirectMessage, GroupDm, MessageAuthor } from "./types.ts";
+import type { Attachment, DirectMessage, GroupDm, MessageAuthor } from "./types.ts";
 
 /**
  * Group DMs live in their own tables (`group_dms` / `group_dm_members` /
@@ -10,7 +10,7 @@ import type { DirectMessage, GroupDm, MessageAuthor } from "./types.ts";
 const GROUP_SELECT = `
   id, owner_id, name, icon_url, created_at, last_message_at,
   group_dm_members(user_id, joined_at, last_read_at, profile:profiles(id, username, display_name, avatar_url, accent_color, status)),
-  group_messages(content, created_at, author_id)
+  group_messages(content, created_at, author_id, attachments)
 `;
 
 type RawGroup = {
@@ -25,7 +25,12 @@ type RawGroup = {
     last_read_at: string | null;
     profile: MessageAuthor | null;
   }[];
-  group_messages?: { content: string; created_at: string; author_id: string }[];
+  group_messages?: {
+    content: string;
+    created_at: string;
+    author_id: string;
+    attachments?: Attachment[] | null;
+  }[];
 };
 
 function shapeGroup(row: RawGroup, viewerId: string): GroupDm {
@@ -77,7 +82,7 @@ export async function fetchGroupMessages(
   const { data } = await supabase
     .from("group_messages")
     .select(
-      `id, group_id, author_id, content, created_at,
+      `id, group_id, author_id, content, created_at, attachments,
        author:profiles(id, username, display_name, avatar_url, accent_color)`,
     )
     .eq("group_id", groupId)
@@ -152,12 +157,13 @@ export async function sendGroupMessage(
   groupId: string,
   authorId: string,
   content: string,
+  attachments: Attachment[] = [],
 ) {
   const { data, error } = await supabase
     .from("group_messages")
-    .insert({ group_id: groupId, author_id: authorId, content })
+    .insert({ group_id: groupId, author_id: authorId, content, attachments })
     .select(
-      `id, group_id, author_id, content, created_at,
+      `id, group_id, author_id, content, created_at, attachments,
        author:profiles(id, username, display_name, avatar_url, accent_color)`,
     )
     .maybeSingle<DirectMessage & { group_id: string }>();

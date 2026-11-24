@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
+import { normalizeAttachments } from "@/lib/attachments";
 import { AppearanceProvider, useAppearance } from "@/lib/appearance";
 import { ServerRail } from "@/components/server-rail";
 import { initialsFor } from "@/lib/naming";
@@ -64,6 +65,7 @@ import {
   type FriendRequest,
 } from "@/lib/social";
 import type {
+  Attachment,
   Channel,
   DirectMessage,
   DmChannel,
@@ -96,6 +98,8 @@ export type CommsInitial = {
   email: string;
   startView?: "home" | "server";
   startDmId?: string | null;
+  /** A *peer user id* from `/channels/@me/<userId>`, resolved to a dm_channel on mount. */
+  startDmPeerId?: string | null;
 };
 
 export function CommsApp({ initial, onMembersChanged }: { initial: CommsInitial; onMembersChanged?: () => void }) {
@@ -144,6 +148,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const [homeTab, setHomeTab] = useState<HomeTab>("friends");
   const [dmChannels, setDmChannels] = useState<DmChannel[]>([]);
   const [activeDmId, setActiveDmId] = useState<string | null>(initial.startDmId ?? null);
+  const pendingDmPeer = useRef<string | null>(initial.startDmPeerId ?? null);
   const [dmMessages, setDmMessages] = useState<DirectMessage[]>([]);
   const [friends, setFriends] = useState<FriendEntry[]>([]);
   const [incoming, setIncoming] = useState<FriendRequest[]>([]);
@@ -256,6 +261,27 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     void loadSocial();
   }, [loadSocial]);
 
+  // /channels/@me/<peerId> carries a *user* id. Resolve it to (or create) the
+  // matching dm_channel so a deep link — or a brand-new conversation that has no
+  // channel row yet — never lands on a blank pane.
+  useEffect(() => {
+    const peerId = pendingDmPeer.current;
+    if (!peerId || activeDmId) return;
+    pendingDmPeer.current = null;
+    void (async () => {
+      const channelId = await ensureDmChannel(supabase, peerId);
+      if (!channelId) {
+        flash("Couldn't open that conversation.");
+        return;
+      }
+      const dms = await loadSocial();
+      setView("home");
+      setHomeTab("friends");
+      setActiveDmId(channelId);
+      if (!dms.some((d) => d.id === channelId)) void loadSocial();
+    })();
+  }, [supabase, activeDmId, loadSocial, flash]);
+
   // Realtime: friendships, DMs, dm_channel list, presence changes
   useEffect(() => {
     const channel = supabase
@@ -324,7 +350,14 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           filter: `dm_channel_id=eq.${activeDmId}`,
         },
         (payload) => {
-          const incomingMsg = payload.new as DirectMessage;
+          // Realtime payloads are raw table rows: `attachments` is jsonb and the
+          // joined `author` is absent, so normalize both before rendering.
+          const row = payload.new as DirectMessage;
+          const incomingMsg: DirectMessage = {
+            ...row,
+            attachments: normalizeAttachments(row.attachments),
+            author: row.author ?? null,
+          };
           setDmMessages((prev) =>
             prev.some((m) => m.id === incomingMsg.id) ? prev : [...prev, incomingMsg],
           );
@@ -693,8 +726,9 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     }
   }
 
-  async function sendDm(content: string) {
+  async function sendDm(content: string, attachments: Attachment[] = []) {
     if (!activeDmId) return;
+    if (!content.trim() && attachments.length === 0) return;
     const optimistic: DirectMessage = {
       id: `tmp-${crypto.randomUUID()}`,
       dm_channel_id: activeDmId,
@@ -703,6 +737,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       created_at: new Date().toISOString(),
       edited_at: null,
       read_at: null,
+      attachments,
       author: {
         id: profile.id,
         username: profile.username,
@@ -712,7 +747,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       },
     };
     setDmMessages((prev) => [...prev, optimistic]);
-    const saved = await sendDirectMessage(supabase, activeDmId, profile.id, content);
+    const saved = await sendDirectMessage(supabase, activeDmId, profile.id, content, attachments);
     if (!saved) {
       setDmMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
       flash("Message failed to send.");
@@ -769,8 +804,9 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     flash(`Created ${group.name ?? "group"}`);
   }
 
-  async function sendGroupMsg(content: string) {
+  async function sendGroupMsg(content: string, attachments: Attachment[] = []) {
     if (!activeGroupId) return;
+    if (!content.trim() && attachments.length === 0) return;
     const optimistic: DirectMessage = {
       id: `tmp-${crypto.randomUUID()}`,
       dm_channel_id: activeGroupId,
@@ -779,6 +815,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       created_at: new Date().toISOString(),
       edited_at: null,
       read_at: null,
+      attachments,
       author: {
         id: profile.id,
         username: profile.username,
@@ -788,7 +825,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       },
     };
     setGroupMessages((prev) => [...prev, optimistic]);
-    const saved = await sendGroupMessage(supabase, activeGroupId, profile.id, content);
+    const saved = await sendGroupMessage(supabase, activeGroupId, profile.id, content, attachments);
     if (saved) {
       setGroupMessages((prev) => prev.map((m) => (m.id === optimistic.id ? saved : m)));
     } else {
@@ -1191,9 +1228,10 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               channel={activeDm}
               messages={dmMessages}
               profile={profile}
-              onSend={(content) => void sendDm(content)}
+              onSend={(content, attachments) => void sendDm(content, attachments)}
               onDelete={(id) => void deleteDm(id)}
               onOpenProfile={(userId) => void openProfile(userId)}
+              supabase={supabase}
             />
           )}
 
@@ -1210,7 +1248,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               }
               messages={groupMessages}
               profile={profile}
-              onSend={(content) => void sendGroupMsg(content)}
+              onSend={(content, attachments) => void sendGroupMsg(content, attachments)}
               onDelete={(id) => setGroupMessages((prev) => prev.filter((m) => m.id !== id))}
               onOpenProfile={(userId) => void openProfile(userId)}
               group={{
@@ -1222,6 +1260,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               }}
               onInviteToGroup={() => setDialog("newmessage")}
               onEditGroup={() => setDialog("group-icon")}
+              supabase={supabase}
             />
           )}
 

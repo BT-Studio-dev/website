@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
+  Attachment,
   BlockedUser,
   DirectMessage,
   DmChannel,
@@ -259,7 +260,7 @@ export async function fetchDirectMessages(
 ): Promise<DirectMessage[]> {
   const { data } = await supabase
     .from("direct_messages")
-    .select(`id, dm_channel_id, author_id, content, created_at, edited_at, read_at, author:profiles(${AUTHOR_FIELDS})`)
+    .select(`id, dm_channel_id, author_id, content, created_at, edited_at, read_at, attachments, author:profiles(${AUTHOR_FIELDS})`)
     .eq("dm_channel_id", dmChannelId)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -271,11 +272,12 @@ export async function sendDirectMessage(
   dmChannelId: string,
   authorId: string,
   content: string,
+  attachments: Attachment[] = [],
 ) {
   const { data, error } = await supabase
     .from("direct_messages")
-    .insert({ dm_channel_id: dmChannelId, author_id: authorId, content })
-    .select(`id, dm_channel_id, author_id, content, created_at, edited_at, read_at, author:profiles(${AUTHOR_FIELDS})`)
+    .insert({ dm_channel_id: dmChannelId, author_id: authorId, content, attachments })
+    .select(`id, dm_channel_id, author_id, content, created_at, edited_at, read_at, attachments, author:profiles(${AUTHOR_FIELDS})`)
     .single<DirectMessage>();
   if (error) return null;
   return data;
@@ -339,17 +341,76 @@ export async function updateProfile(supabase: SupabaseClient, userId: string, pa
   return { profile: data, error: error?.message ?? null };
 }
 
-export async function uploadAvatar(supabase: SupabaseClient, userId: string, file: File) {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-  const path = `${userId}/avatar-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("avatars").upload(path, file, {
-    cacheControl: "3600",
-    upsert: true,
-    contentType: file.type,
-  });
-  if (error) return { url: null, error: error.message };
+/**
+ * Upload an avatar into the public `avatars` bucket.
+ *
+ * Object paths are always `<userId>/<file>` so the storage policy
+ * `(storage.foldername(name))[1] = auth.uid()` accepts the write. Every
+ * failure is turned into a sentence a person can act on — the caller shows it
+ * verbatim instead of a generic "Avatar upload failed".
+ */
+export async function uploadAvatar(
+  supabase: SupabaseClient,
+  userId: string,
+  file: File,
+): Promise<{ url: string | null; error: string | null }> {
+  return uploadToBucket(supabase, "avatars", userId, "avatar", file);
+}
 
-  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+/** Upload a banner into the public `banners` bucket. */
+export async function uploadBanner(
+  supabase: SupabaseClient,
+  userId: string,
+  file: File,
+): Promise<{ url: string | null; error: string | null }> {
+  return uploadToBucket(supabase, "banners", userId, "banner", file);
+}
+
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"];
+
+async function uploadToBucket(
+  supabase: SupabaseClient,
+  bucket: "avatars" | "banners" | "server-icons",
+  userId: string,
+  prefix: string,
+  file: File,
+): Promise<{ url: string | null; error: string | null }> {
+  if (!file || file.size === 0) return { url: null, error: "That file is empty." };
+  if (file.size > 8 * 1024 * 1024) {
+    return { url: null, error: "Images must be 8 MB or smaller." };
+  }
+  if (file.type && !IMAGE_TYPES.includes(file.type)) {
+    return { url: null, error: "Use a PNG, JPEG, WebP, GIF or AVIF image." };
+  }
+
+  const ext =
+    file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
+    (file.type.split("/")[1] ?? "png");
+  // A stable filename keeps the URL cache-friendly while the timestamp busts it.
+  const path = `${userId}/${prefix}-${Date.now()}.${ext}`;
+
+  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+    cacheControl: "31536000",
+    upsert: true,
+    contentType: file.type || "image/png",
+  });
+
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("bucket not found")) {
+      return { url: null, error: `The \`${bucket}\` bucket is missing — run the storage migration.` };
+    }
+    if (message.includes("row-level security") || message.includes("unauthorized")) {
+      return { url: null, error: "Storage rejected the upload. Sign out and back in, then retry." };
+    }
+    if (message.includes("payload too large") || message.includes("exceeded")) {
+      return { url: null, error: "That image is too large for the bucket limit." };
+    }
+    return { url: null, error: error.message };
+  }
+
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+  if (!data?.publicUrl) return { url: null, error: "Could not build a public URL for that image." };
   return { url: data.publicUrl, error: null };
 }
 
@@ -469,20 +530,6 @@ export async function saveProfileCard(
   },
 ) {
   return updateProfile(supabase, userId, patch as ProfilePatch);
-}
-
-/** Upload a banner image (or animated GIF) into the public `avatars` bucket. */
-export async function uploadBanner(supabase: SupabaseClient, userId: string, file: File) {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-  const path = `${userId}/banner-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("avatars").upload(path, file, {
-    cacheControl: "3600",
-    upsert: true,
-    contentType: file.type,
-  });
-  if (error) return { url: null, error: error.message };
-  const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-  return { url: data.publicUrl, error: null };
 }
 
 export async function exportAccountData(supabase: SupabaseClient) {

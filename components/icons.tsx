@@ -452,3 +452,34 @@ export const StatusOfflineIcon = (p: IconProps) => (
     <circle cx="12" cy="12" r="7.2" stroke="currentColor" strokeWidth="2.4" fill="none" />
   </svg>
 );
+
+/* ----------------------- Attachments (v5) ----------------------- */
+
+export const ImageIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
+    <circle cx="8.5" cy="9.5" r="1.6" />
+    <path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" />
+  </svg>
+);
+
+export const FileIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M14 3H7.5A2.5 2.5 0 0 0 5 5.5v13A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V8l-5-5Z" />
+    <path d="M14 3v5h5" />
+  </svg>
+);
+
+export const ThreadIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M4 5.5h16M4 11h10M4 16.5h7" />
+    <path d="M19.5 12.5v5a1.5 1.5 0 0 1-1.5 1.5h-3.5L11 22v-3H9" />
+  </svg>
+);
+
+export const UploadCloudIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M6.5 18.5A4.5 4.5 0 0 1 6 9.6a5.6 5.6 0 0 1 10.9-1.4A4.2 4.2 0 0 1 18 18.5" />
+    <path d="M12 21v-8m0 0-3 3m3-3 3 3" />
+  </svg>
+);

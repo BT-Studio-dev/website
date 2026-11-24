@@ -28,6 +28,8 @@ export type CommsSnapshot = {
   email: string;
   startView: "home" | "server";
   startDmId: string | null;
+  /** Peer user id from `/channels/@me/<userId>`; resolved to a dm_channel on mount. */
+  startDmPeerId?: string | null;
 };
 
 export type LoadOutcome =
@@ -152,6 +154,7 @@ export async function fetchServerBundle(
     email,
     startView: "server",
     startDmId: null,
+    startDmPeerId: null,
   };
 }
 

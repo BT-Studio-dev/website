@@ -2,7 +2,10 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
-import { ChatComposer } from "@/components/chat-composer";
+import { ChatComposer, type ComposerApi } from "@/components/chat-composer";
+import { AttachmentGrid } from "@/components/attachments";
+import { UploadDropzone } from "@/components/upload-dropzone";
+import { uploadAttachments } from "@/lib/attachments";
 import { MessageContent } from "@/components/message-content";
 import { DmProfilePanel } from "@/components/dm-profile-panel";
 import {
@@ -14,7 +17,8 @@ import {
   UsersIcon,
 } from "@/components/icons";
 import { formatDayLabel, formatTimestamp, formatTime, sameDay, shouldGroup } from "@/lib/format";
-import type { DirectMessage, DmChannel, MessageAuthor, Presence, Profile } from "@/lib/types";
+import type { Attachment, DirectMessage, DmChannel, MessageAuthor, Presence, Profile } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export function DmView({
   channel,
@@ -22,6 +26,7 @@ export function DmView({
   profile,
   onSend,
   onDelete,
+  supabase,
   onOpenProfile,
   readMarker,
   group,
@@ -32,8 +37,10 @@ export function DmView({
   channel: DmChannel;
   messages: DirectMessage[];
   profile: Profile;
-  onSend: (content: string) => void;
+  onSend: (content: string, attachments: Attachment[]) => void;
   onDelete: (id: string) => void;
+  /** Used to upload attachments to the `chat-attachments` bucket. */
+  supabase?: SupabaseClient | null;
   /** Clicking the peer's avatar/name opens their profile card. */
   onOpenProfile?: (userId: string) => void;
   /** Timestamp of the last message the viewer had already read. */
@@ -51,8 +58,10 @@ export function DmView({
   members?: MessageAuthor[];
 }) {
   const [search, setSearch] = useState<string | null>(null);
+  const [composerNote, setComposerNote] = useState<string | null>(null);
   const [showPanel, setShowPanel] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composerApi = useRef<ComposerApi | null>(null);
 
   const peer = channel.peer as (MessageAuthor & { custom_status?: string | null; status?: string }) | null;
   const peerName = peer?.display_name || peer?.username || "Conversation";
@@ -67,7 +76,11 @@ export function DmView({
   const filtered = useMemo(() => {
     if (!search?.trim()) return messages;
     const needle = search.trim().toLowerCase();
-    return messages.filter((m) => m.content.toLowerCase().includes(needle));
+    return messages.filter(
+      (m) =>
+        m.content.toLowerCase().includes(needle) ||
+        (m.attachments ?? []).some((a) => a.name.toLowerCase().includes(needle)),
+    );
   }, [messages, search]);
 
   useEffect(() => {
@@ -96,6 +109,13 @@ export function DmView({
   return (
     <section className="ambient-stage flex min-w-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
+        <UploadDropzone
+          target={group ? groupName : `@${peer?.username ?? "conversation"}`}
+          onFiles={(files) => {
+            composerApi.current?.addFiles(files);
+            composerApi.current?.focus();
+          }}
+        >
         {/* header */}
         <header className="glass-bar flex h-12 min-w-0 shrink-0 items-center gap-2.5 overflow-hidden border-b px-4">
           <button
@@ -309,11 +329,16 @@ export function DmView({
                         </time>
                       </div>
                     )}
-                    <MessageContent
-                      content={message.content}
-                      selfId={profile.id}
-                      onOpenProfile={onOpenProfile}
-                    />
+                    {message.content && (
+                      <MessageContent
+                        content={message.content}
+                        selfId={profile.id}
+                        onOpenProfile={onOpenProfile}
+                      />
+                    )}
+                    {(message.attachments ?? []).length > 0 && (
+                      <AttachmentGrid attachments={message.attachments ?? []} />
+                    )}
                   </div>
                   {mine && (
                     <button
@@ -332,10 +357,31 @@ export function DmView({
           <div className="h-2" />
         </div>
 
+        {composerNote && (
+          <div className="mx-3 mb-1 flex items-center gap-2 rounded-lg border border-line/70 bg-raised/60 px-3 py-1.5 text-[12px] text-muted">
+            <span className="min-w-0 flex-1 truncate">{composerNote}</span>
+            <button
+              type="button"
+              onClick={() => setComposerNote(null)}
+              aria-label="Dismiss"
+              className="shrink-0 rounded px-1 text-dim transition hover:text-bright"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <ChatComposer
+          apiRef={composerApi}
           placeholder={group ? `Message ${groupName}` : `Message @${peer?.username ?? ""}`}
           ariaLabel={group ? `Message ${groupName}` : `Message ${peerName}`}
           onSubmit={onSend}
+          onUpload={
+            supabase ? (files) => uploadAttachments(supabase, profile.id, files) : undefined
+          }
+          onCreateThread={() =>
+            setComposerNote("Threads are coming soon — reply here for now.")
+          }
+          onUseApps={() => setComposerNote("Apps and integrations are coming soon.")}
           members={group?.members ?? (peer ? [peer, profile as unknown as MessageAuthor] : [])}
           selfId={profile.id}
           leftSlot={
@@ -349,6 +395,7 @@ export function DmView({
             </button>
           }
         />
+        </UploadDropzone>
       </div>
 
       {/* right-hand member panel (1:1 conversations) */}

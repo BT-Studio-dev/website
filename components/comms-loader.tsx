@@ -97,22 +97,13 @@ export function CommsLoader({
 
       const { servers, roles } = await fetchServers(supabase, userId);
 
-      if (servers.length === 0) {
-        setState({ phase: "empty", profileId: userId });
-        return;
-      }
-
-      const server =
-        (serverId && serverId !== "@me"
-          ? servers.find((s) => s.id === serverId)
-          : undefined) ??
-        servers.find((s) => s.is_default) ??
-        servers[0];
-
       const isHome = serverId === "@me";
 
       if (isHome) {
-        // Home / DMs view — no server context required.
+        // Home / DMs view — no server context required. This must come *before*
+        // the "no servers" guard: someone who only uses DMs still needs their
+        // conversations, and bailing out here was what left /channels/@me/<id>
+        // blank for accounts that hadn't joined a server yet.
         setState({
           phase: "joined",
           data: {
@@ -126,11 +117,24 @@ export function CommsLoader({
             viewerRole: "member",
             email: session.user.email ?? "",
             startView: "home",
-            startDmId: dmId ?? null,
+            // The URL carries a *peer user id*; the shell resolves it to a
+            // dm_channel id on mount (see `startDmPeerId`).
+            startDmPeerId: dmId ?? null,
+            startDmId: null,
           },
         });
         return;
       }
+
+      if (servers.length === 0) {
+        setState({ phase: "empty", profileId: userId });
+        return;
+      }
+
+      const server =
+        (serverId ? servers.find((s) => s.id === serverId) : undefined) ??
+        servers.find((s) => s.is_default) ??
+        servers[0];
 
       const bundle = await fetchServerBundle(
         supabase,

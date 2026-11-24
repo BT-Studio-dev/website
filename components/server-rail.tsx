@@ -42,7 +42,7 @@ export function ServerRail({
   return (
     <nav
       aria-label="Servers"
-      className="scrollbar-none flex h-full w-[72px] shrink-0 flex-col items-center gap-2 overflow-y-auto overflow-x-hidden bg-sidebar py-3 app-gradient"
+      className="w-[72px] flex flex-col items-center py-3 overflow-y-auto overflow-x-hidden scrollbar-none h-full shrink-0 bg-sidebar app-gradient"
     >
       {/* Home / Direct Messages */}
       <RailItem
@@ -65,7 +65,7 @@ export function ServerRail({
         }
       />
 
-      <div className="my-0.5 h-px w-8 shrink-0 bg-line" />
+      <div className="my-2 h-px w-8 shrink-0 bg-line" />
 
       {servers.map((server) => (
         <RailItem
@@ -90,7 +90,7 @@ export function ServerRail({
         onClick={onAddServer}
         title="Add a Server"
         aria-label="Add a Server"
-        className="group relative grid h-12 w-12 shrink-0 place-items-center rounded-[24px] border border-dashed border-line text-mint transition-all hover:rounded-[16px] hover:border-mint/70 hover:bg-mint/10"
+        className="group relative mt-2 grid h-12 w-12 shrink-0 place-items-center rounded-[24px] border border-dashed border-line text-mint transition-all hover:rounded-[16px] hover:border-mint/70 hover:bg-mint/10"
       >
         <PlusIcon width={20} height={20} />
       </button>
@@ -102,7 +102,7 @@ export function ServerRail({
           onClick={onJoinServer}
           title="Join a Server"
           aria-label="Join a Server"
-          className="group relative grid h-9 w-9 shrink-0 place-items-center rounded-[16px] text-[11px] font-bold text-muted transition hover:bg-hover/60 hover:text-bright"
+          className="group relative mt-2 grid h-9 w-9 shrink-0 place-items-center rounded-[16px] text-[11px] font-bold text-muted transition hover:bg-hover/60 hover:text-bright"
         >
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 8l-5 4 5 4M5 12h11" />
@@ -117,7 +117,7 @@ export function ServerRail({
         onClick={onExplore}
         title="Explore Discoverable Servers"
         aria-label="Explore Discoverable Servers"
-        className="group relative grid h-12 w-12 shrink-0 place-items-center rounded-[24px] bg-raised text-muted transition-all hover:rounded-[16px] hover:bg-hover hover:text-bright"
+        className="group relative mt-2 grid h-12 w-12 shrink-0 place-items-center rounded-[24px] bg-raised text-muted transition-all hover:rounded-[16px] hover:bg-hover hover:text-bright"
       >
         <CompassIcon width={20} height={20} />
       </button>
@@ -129,7 +129,7 @@ export function ServerRail({
         rel="noopener noreferrer"
         title="Download Apps"
         aria-label="Download Apps"
-        className="group relative grid h-12 w-12 shrink-0 place-items-center rounded-[24px] bg-raised text-mint transition-all hover:rounded-[16px] hover:bg-mint/20"
+        className="group relative mt-2 grid h-12 w-12 shrink-0 place-items-center rounded-[24px] bg-raised text-mint transition-all hover:rounded-[16px] hover:bg-mint/20"
       >
         <DownloadIcon width={20} height={20} />
       </a>
