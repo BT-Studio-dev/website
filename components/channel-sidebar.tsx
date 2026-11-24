@@ -8,9 +8,20 @@ import {
   PlusIcon,
   MicOffIcon,
   ChevronIcon,
+  CrownIcon,
+  BoostIcon,
 } from "@/components/icons";
 import { UserPanel } from "@/components/user-panel";
-import type { Channel, Profile, Server, VoiceState } from "@/lib/types";
+import { ServerMenu, type ServerMenuAction } from "@/components/server-menu";
+import type {
+  Channel,
+  Presence,
+  Profile,
+  Server,
+  StatusDuration,
+  VoiceSettings,
+  VoiceState,
+} from "@/lib/types";
 
 export function ChannelSidebar({
   server,
@@ -26,6 +37,27 @@ export function ChannelSidebar({
   onLeaveVoice,
   onAddChannel,
   onCopyInvite,
+  onServerAction,
+  onQuickCreate,
+  isNewServer,
+  showAllChannels = true,
+  hideMutedChannels = false,
+  onToggleShowAll,
+  onToggleHideMuted,
+  status,
+  statusExpiresAt,
+  onSetStatus,
+  voice,
+  onVoiceChange,
+  onOpenVoiceSettings,
+  onOpenProfile,
+  onSwitchAccounts,
+  onCopyUserId,
+  muted,
+  deafened,
+  onToggleMute,
+  onToggleDeafen,
+  onPreviewSound,
 }: {
   server: Server;
   channels: Channel[];
@@ -40,35 +72,88 @@ export function ChannelSidebar({
   onLeaveVoice: () => void;
   onAddChannel: (kind: "text" | "voice") => void;
   onCopyInvite: () => void;
+  onServerAction?: (action: ServerMenuAction) => void;
+  /** The `+` next to a category header, scoped to that category. */
+  onQuickCreate?: (category: string, kind: "text" | "voice") => void;
+  isNewServer?: boolean;
+  showAllChannels?: boolean;
+  hideMutedChannels?: boolean;
+  onToggleShowAll?: (next: boolean) => void;
+  onToggleHideMuted?: (next: boolean) => void;
+  status?: Presence;
+  statusExpiresAt?: string | null;
+  onSetStatus?: (status: Presence, duration: StatusDuration) => void;
+  voice?: VoiceSettings;
+  onVoiceChange?: (patch: Partial<VoiceSettings>) => void;
+  onOpenVoiceSettings?: () => void;
+  onOpenProfile?: () => void;
+  onSwitchAccounts?: () => void;
+  onCopyUserId?: () => void;
+  muted?: boolean;
+  deafened?: boolean;
+  onToggleMute?: () => void;
+  onToggleDeafen?: () => void;
+  onPreviewSound?: (id: string) => void;
 }) {
   const textChannels = channels.filter((c) => c.kind === "text");
   const voiceChannels = channels.filter((c) => c.kind === "voice");
   const joinedVoice = voiceStates.find((v) => v.user_id === profile.id);
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col bg-ink">
+    <aside className="glass-panel flex w-60 shrink-0 flex-col border-r border-white/5">
       {/* Server header */}
-      <button
-        onClick={onCopyInvite}
-        title="Copy invite link"
-        className="group flex h-12 shrink-0 items-center justify-between border-b border-line/70 px-3.5 text-left transition hover:bg-hover/50"
-      >
-        <span className="min-w-0">
-          <span className="block truncate text-[14px] font-semibold tracking-tight text-bright">
-            {server.name}
-          </span>
-          {server.is_default && (
-            <span className="text-[10px] tracking-wide text-dim uppercase">
-              Official server
+      <div className="flex h-12 shrink-0 items-center gap-1 border-b border-white/8 px-2 shadow-sm">
+        {canManage && (
+          <ServerMenu
+            serverName={server.name}
+            canManage={canManage}
+            showAllChannels={showAllChannels}
+            hideMutedChannels={hideMutedChannels}
+            onToggleAll={(next) => onToggleShowAll?.(next)}
+            onToggleMuted={(next) => onToggleHideMuted?.(next)}
+            onAction={(action) => onServerAction?.(action)}
+          />
+        )}
+        {!canManage && (
+          <button
+            onClick={onCopyInvite}
+            title="Copy invite link"
+            className="flex min-w-0 flex-1 items-center rounded-md px-1 py-1 text-left transition hover:bg-white/8"
+          >
+            <span className="min-w-0 flex-1 truncate text-[14px] font-semibold tracking-tight text-bright">
+              {server.name}
             </span>
-          )}
-        </span>
-        <span className="shrink-0 text-[10px] text-dim opacity-0 transition group-hover:opacity-100">
-          copy invite
-        </span>
-      </button>
+          </button>
+        )}
+        <button
+          onClick={() => onServerAction?.("invite")}
+          title="Invite people"
+          aria-label="Invite people"
+          className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition hover:bg-white/8 hover:text-bright"
+        >
+          <PlusIcon width={15} height={15} />
+        </button>
+      </div>
 
       <div className="scroll-thin flex-1 space-y-5 overflow-y-auto px-2 py-3">
+        {isNewServer && <GetStartedBanner />}
+
+        <ChannelGroup
+          label="Information"
+          kind="text"
+          canManage={canManage}
+          onAdd={() => (onQuickCreate ? onQuickCreate("Information", "text") : onAddChannel("text"))}
+          collapsible
+        >
+          <ChannelRow
+            active={false}
+            icon={<BoostIcon width={15} height={15} />}
+            name="server-guide"
+            onClick={() => undefined}
+            readOnly
+          />
+        </ChannelGroup>
+
         <ChannelGroup
           label="Text Channels"
           kind="text"
@@ -92,7 +177,7 @@ export function ChannelSidebar({
           label="Voice Channels"
           kind="voice"
           canManage={canManage}
-          onAdd={() => onAddChannel("voice")}
+          onAdd={() => (onQuickCreate ? onQuickCreate("Voice Channels", "voice") : onAddChannel("voice"))}
         >
           {voiceChannels.map((channel) => {
             const occupants = voiceStates.filter((v) => v.channel_id === channel.id);
@@ -162,7 +247,24 @@ export function ChannelSidebar({
         </div>
       )}
 
-      <UserPanel profile={profile} onOpenSettings={onOpenSettings} />
+      <UserPanel
+        profile={profile}
+        status={status}
+        statusExpiresAt={statusExpiresAt}
+        onSetStatus={onSetStatus}
+        voice={voice}
+        onVoiceChange={onVoiceChange}
+        onOpenSettings={onOpenSettings}
+        onOpenVoiceSettings={onOpenVoiceSettings}
+        onOpenProfile={onOpenProfile}
+        onSwitchAccounts={onSwitchAccounts}
+        onCopyUserId={onCopyUserId}
+        muted={muted}
+        deafened={deafened}
+        onToggleMute={onToggleMute}
+        onToggleDeafen={onToggleDeafen}
+        onPreviewSound={onPreviewSound}
+      />
     </aside>
   );
 }
@@ -172,12 +274,14 @@ function ChannelGroup({
   canManage,
   onAdd,
   children,
+  collapsible,
 }: {
   label: string;
   kind: "text" | "voice";
   canManage: boolean;
   onAdd: () => void;
   children: React.ReactNode;
+  collapsible?: boolean;
 }) {
   const [open, setOpen] = useState(true);
 
@@ -220,6 +324,7 @@ function ChannelRow({
   onClick,
   onJoin,
   joinLabel,
+  readOnly,
 }: {
   icon: React.ReactNode;
   name: string;
@@ -228,12 +333,13 @@ function ChannelRow({
   onClick: () => void;
   onJoin?: () => void;
   joinLabel?: string;
+  readOnly?: boolean;
 }) {
   return (
     <div
       className={`group flex items-center rounded-md transition ${
-        active ? "bg-hover text-bright" : "text-muted hover:bg-hover/60 hover:text-bright"
-      }`}
+        active ? "bg-white/12 text-bright" : "text-muted hover:bg-white/8 hover:text-bright"
+      } ${readOnly ? "opacity-60" : ""}`}
     >
       <button
         onClick={onClick}
@@ -261,4 +367,28 @@ function ChannelRow({
 
 function EmptyHint({ label }: { label: string }) {
   return <p className="px-2 py-1 text-[11px] text-dim/80">{label}</p>;
+}
+
+/** Shown in freshly created servers until the owner dismisses onboarding. */
+function GetStartedBanner() {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-mint/30 bg-gradient-to-br from-mint/20 to-blurple/15 p-2.5">
+      <button
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss Get Started"
+        className="absolute top-1 right-1 grid h-4 w-4 place-items-center rounded text-mint/70 hover:text-white"
+      >
+        ×
+      </button>
+      <p className="flex items-center gap-1 text-[11.5px] font-bold text-bright">
+        <CrownIcon width={12} height={12} className="text-amber" /> Get Started
+      </p>
+      <p className="mt-0.5 text-[10.5px] leading-snug text-muted">
+        Set up your server and invite your friends.
+      </p>
+    </div>
+  );
 }

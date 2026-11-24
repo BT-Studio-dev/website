@@ -12,10 +12,15 @@
 
 import type {
   Channel,
+  DirectMessage,
+  GroupDm,
+  LinkedAccount,
   Message,
   MessageAuthor,
+  Presence,
   Profile,
   Server,
+  ServerInvite,
   ServerMember,
   VoiceState,
 } from "@/lib/types";
@@ -255,6 +260,18 @@ const VOICE: VoiceState[] = [
   },
 ];
 
+/** Resolves any demo person (friend or member) into a MessageAuthor. */
+function findDemoAuthor(userId: string): MessageAuthor | null {
+  if (userId === ME.id) return ME;
+  const friend = demoFriends.find((f) => f.profile.id === userId);
+  if (friend) return friend.profile;
+  for (const list of Object.values(MEMBERS)) {
+    const member = list.find((m) => m.user_id === userId);
+    if (member?.profile) return member.profile;
+  }
+  return null;
+}
+
 let messageCounter = 1000;
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((fn) => fn());
@@ -268,6 +285,7 @@ export const demoStore = {
   channels: CHANNELS,
   members: MEMBERS,
   voice: VOICE,
+  groupMessages: [] as DirectMessage[],
 
   subscribe(fn: () => void) {
     listeners.add(fn);
@@ -412,6 +430,10 @@ export const demoStore = {
         | "widgets"
         | "user_settings"
         | "bt_pro"
+        | "status_expires_at"
+        | "icon_pack"
+        | "chat_display"
+        | "voice_settings"
       >
     >,
   ) {
@@ -439,6 +461,180 @@ export const demoStore = {
       notify();
     }
     return { ok: true as const, server };
+  },
+
+  /* --------------------------- v4: group DMs --------------------------- */
+
+  groups: [] as GroupDm[],
+
+  groupMessagesOf(groupId: string) {
+    return demoStore.groupMessages.filter((m) => m.dm_channel_id === groupId);
+  },
+
+  createGroup(memberIds: string[], name?: string | null, iconUrl?: string | null) {
+    const members = Array.from(new Set([ME.id, ...memberIds]))
+      .map((id) => findDemoAuthor(id))
+      .filter((p): p is MessageAuthor => Boolean(p));
+    if (members.length < 2) {
+      return { ok: false as const, message: "Pick at least one more person." };
+    }
+    const group: GroupDm = {
+      id: `demo-group-${Date.now()}`,
+      owner_id: ME.id,
+      name: name?.trim() || null,
+      icon_url: iconUrl ?? null,
+      created_at: new Date().toISOString(),
+      last_message_at: new Date().toISOString(),
+      members,
+      last_message: null,
+      unread_count: 0,
+    };
+    demoStore.groups = [group, ...demoStore.groups];
+    notify();
+    return { ok: true as const, group };
+  },
+
+  updateGroup(groupId: string, patch: { name?: string | null; icon_url?: string | null }) {
+    demoStore.groups = demoStore.groups.map((g) => (g.id === groupId ? { ...g, ...patch } : g));
+    notify();
+  },
+
+  addGroupMembers(groupId: string, memberIds: string[]) {
+    demoStore.groups = demoStore.groups.map((g) => {
+      if (g.id !== groupId) return g;
+      const additions = memberIds
+        .map(findDemoAuthor)
+        .filter((p): p is MessageAuthor => Boolean(p));
+      const members = [...g.members];
+      for (const person of additions) {
+        if (!members.some((m) => m.id === person.id)) members.push(person);
+      }
+      return { ...g, members: members.slice(0, 10) };
+    });
+    notify();
+  },
+
+  addGroupMessage(groupId: string, content: string) {
+    const message: DirectMessage = {
+      id: `demo-gmsg-${++messageCounter}`,
+      dm_channel_id: groupId,
+      author_id: ME.id,
+      content,
+      created_at: new Date().toISOString(),
+      edited_at: null,
+      read_at: null,
+      author: {
+        id: ME.id,
+        username: ME.username,
+        display_name: ME.display_name,
+        avatar_url: ME.avatar_url,
+        accent_color: ME.accent_color,
+      },
+    };
+    demoStore.groupMessages = [...demoStore.groupMessages, message];
+    demoStore.groups = demoStore.groups.map((g) =>
+      g.id === groupId
+        ? {
+            ...g,
+            last_message_at: message.created_at,
+            last_message: {
+              content,
+              created_at: message.created_at,
+              author_id: ME.id,
+            },
+          }
+        : g,
+    );
+    notify();
+    return message;
+  },
+
+  /* ----------------------- v4: server invites ------------------------- */
+
+  invites: [] as ServerInvite[],
+
+  /** Mirrors `create_server_invite`: reuse an existing code, else mint one. */
+  inviteFor(serverId: string) {
+    const existing = demoStore.invites.find((i) => i.server_id === serverId);
+    if (existing) return existing;
+    const server = demoStore.servers.find((s) => s.id === serverId);
+    const code = server?.invite_code ?? `d${Date.now().toString(36)}`;
+    const invite: ServerInvite = {
+      code,
+      server_id: serverId,
+      created_by: ME.id,
+      created_at: new Date().toISOString(),
+      uses: 0,
+      max_uses: null,
+      expires_at: null,
+    };
+    demoStore.invites = [...demoStore.invites, invite];
+    notify();
+    return invite;
+  },
+
+  redeemInvite(rawCode: string) {
+    const cleaned = rawCode
+      .trim()
+      .toLowerCase()
+      .replace(/^.*[?&]invite=/, "")
+      .replace(/^.*\/invite\//, "")
+      .replace(/\/+$/, "");
+    const invite = demoStore.invites.find((i) => i.code === cleaned);
+    const server =
+      demoStore.servers.find((s) => s.id === invite?.server_id) ??
+      demoStore.servers.find((s) => s.invite_code === cleaned);
+    if (!server) return { ok: false as const, message: "That invite code doesn't match a server." };
+    const already = (MEMBERS[server.id] ?? []).some((m) => m.user_id === ME.id);
+    if (!already) {
+      MEMBERS[server.id] = [
+        ...(MEMBERS[server.id] ?? []),
+        {
+          server_id: server.id,
+          user_id: ME.id,
+          role: "member",
+          joined_at: new Date().toISOString(),
+          profile: ME,
+        },
+      ];
+      if (invite) {
+        demoStore.invites = demoStore.invites.map((i) =>
+          i.code === invite.code ? { ...i, uses: i.uses + 1 } : i,
+        );
+      }
+      notify();
+    }
+    return { ok: true as const, server, alreadyMember: already };
+  },
+
+  /* -------------------------- v4: accounts ---------------------------- */
+
+  accounts: [
+    {
+      id: ME.id,
+      email: "ada@btcomms.test",
+      username: ME.username,
+      display_name: ME.display_name,
+      avatar_url: ME.avatar_url,
+      accent_color: ME.accent_color,
+      active: true,
+    },
+    {
+      id: "demo-user-sol",
+      email: "sol@btcomms.test",
+      username: "sol",
+      display_name: "Sol Kim",
+      avatar_url: null,
+      accent_color: "#3ba55d",
+      active: false,
+    },
+  ] as LinkedAccount[],
+
+  /** Timed presence: mirrors the profiles.status_expires_at write. */
+  setStatus(status: Presence, durationMs: number | null) {
+    const expires = durationMs === null ? null : new Date(Date.now() + durationMs).toISOString();
+    demoStore.updateProfile({ status, status_expires_at: expires });
+    notify();
   },
 
   /** Simulates a teammate replying, so the realtime feel is visible. */

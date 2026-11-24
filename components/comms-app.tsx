@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { AppearanceProvider, useAppearance } from "@/lib/appearance";
 import { ServerRail } from "@/components/server-rail";
+import { initialsFor } from "@/lib/naming";
 import { ChannelSidebar } from "@/components/channel-sidebar";
 import { MessageFeed } from "@/components/message-feed";
 import { MemberList } from "@/components/member-list";
@@ -21,6 +22,29 @@ import {
   type ServerProfile,
 } from "@/components/profile/edit-profile-modal";
 import { ProfileCard } from "@/components/profile/profile-card";
+import { ViewTitle } from "@/components/view-title";
+import { SendMessageButton } from "@/components/status-picker";
+import {
+  CreateServerModal,
+  JoinServerModal,
+  OnboardingView,
+  ServerWizardModal,
+} from "@/components/server-modals";
+import { NewMessageModal, ChangeIconModal } from "@/components/group-dm-modals";
+import { ManageAccountsModal } from "@/components/manage-accounts";
+import { defaultGroupName } from "@/components/home-sidebar";
+import {
+  addGroupMembers,
+  createGroupDm,
+  fetchGroupDms,
+  fetchGroupMessages,
+  markGroupRead,
+  sendGroupMessage,
+  updateGroupDm,
+} from "@/lib/groups";
+import { durationToExpiry, effectiveStatus, publicStatus } from "@/lib/presence";
+import { playSound } from "@/lib/sounds";
+import type { Dialog as NewDialog } from "@/components/comms-types";
 import { CheckIcon, CopyIcon, HashIcon, SpeakerIcon } from "@/components/icons";
 import {
   ensureDmChannel,
@@ -44,15 +68,22 @@ import type {
   Channel,
   DirectMessage,
   DmChannel,
+  GroupDm,
+  LinkedAccount,
   Message,
   Presence,
   Profile,
   Server,
   ServerMember,
+  StatusDuration,
+  VoiceSettings,
   VoiceState,
 } from "@/lib/types";
+import type { ServerIntent, ServerTemplate } from "@/lib/server-templates";
+import type { SettingsSectionId } from "@/components/settings/settings-nav";
 
-type Dialog = "server" | "invite" | "profile" | "channel" | "explore" | "newdm" | null;
+type LegacyDialog = Extract<NewDialog, "invite" | "profile" | "channel" | "explore">;
+type Dialog = NewDialog | LegacyDialog;
 
 export type CommsInitial = {
   profile: Profile;
@@ -142,6 +173,27 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const [joiningCode, setJoiningCode] = useState("");
   const [discover, setDiscover] = useState<Server[]>([]);
   const [newDmSearch, setNewDmSearch] = useState("");
+
+  /* ------------------------------ v4 state ------------------------------ */
+  const pathname = usePathname();
+  const [groups, setGroups] = useState<GroupDm[]>([]);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [groupMessages, setGroupMessages] = useState<DirectMessage[]>([]);
+  const [groupIconTarget, setGroupIconTarget] = useState<string | null>(null);
+  const [wizardStep, setWizardStep] = useState<1 | 2>(1);
+  const [wizardTemplate, setWizardTemplate] = useState<ServerTemplate | null>(null);
+  const [wizardIntent, setWizardIntent] = useState<ServerIntent>("friends");
+  const [onboardingServerId, setOnboardingServerId] = useState<string | null>(null);
+  const [statusExpiresAt, setStatusExpiresAt] = useState<string | null>(
+    initial.profile.status_expires_at ?? null,
+  );
+  const [showAllChannels, setShowAllChannels] = useState(true);
+  const [hideMutedChannels, setHideMutedChannels] = useState(false);
+  const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
+  const [muted, setMuted] = useState(false);
+  const [deafened, setDeafened] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>(undefined);
+  const [categoryTarget, setCategoryTarget] = useState<string | null>(null);
 
   const canManage = initial.viewerRole === "owner" || initial.viewerRole === "admin";
   const activeChannel = channels.find((c) => c.id === activeChannelId) ?? channels[0];
@@ -370,7 +422,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           setMessages(((msgs ?? []) as unknown as Message[]).reverse());
         }
       }
-      router.replace(`/channels/${serverId}/${first?.id ?? ""}`);
+      router.push(`/channels/${serverId}/${first?.id ?? ""}`);
     },
     [supabase, router],
   );
@@ -379,8 +431,9 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     setView("home");
     setActiveServerId(null);
     setActiveDmId(null);
+    setActiveGroupId(null);
     setHomeTab("friends");
-    router.replace("/channels/home");
+    router.push("/channels/@me");
   }, [router]);
 
   /** Clicking an avatar opens either the editor (you) or a read-only card. */
@@ -418,15 +471,18 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       const found = dms.find((d) => d.id === channelId);
       setView("home");
       setActiveServerId(null);
+      setActiveGroupId(null);
       setActiveDmId(channelId);
       setHomeTab("friends");
+      // Discord's canonical DM URL: /channels/@me/<peer id>
+      router.push(`/channels/@me/${userId}`);
       if (found) flash(`Conversation with ${found.peer?.display_name ?? "friend"}`);
     },
     [supabase, loadSocial, flash],
   );
 
   const loadChannel = useCallback(
-    async (channelId: string) => {
+    async (channelId: string, opts: { push?: boolean } = {}) => {
       if (channelId === activeChannelId) return;
       setActiveChannelId(channelId);
       setMessages([]);
@@ -440,8 +496,11 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         .order("created_at", { ascending: false })
         .limit(80);
       setMessages(((data ?? []) as unknown as Message[]).reverse());
+      if (opts.push !== false && activeServerId) {
+        router.push(`/channels/${activeServerId}/${channelId}`);
+      }
     },
-    [supabase, activeChannelId],
+    [supabase, activeChannelId, activeServerId, router],
   );
 
   /* -------------------------------- voice --------------------------------- */
@@ -565,6 +624,26 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     await openServer(found.id);
   }
 
+  async function leaveServer() {
+    if (!activeServerId) return;
+    const target = servers.find((s) => s.id === activeServerId);
+    await supabase
+      .from("server_members")
+      .delete()
+      .eq("server_id", activeServerId)
+      .eq("user_id", profile.id);
+
+    const remaining = servers.filter((s) => s.id !== activeServerId);
+    setServers(remaining);
+    flash(target ? `Left ${target.name}` : "Left server");
+
+    if (remaining.length > 0) {
+      await openServer(remaining[0].id);
+    } else {
+      openHome();
+    }
+  }
+
   async function openExplore() {
     setDialog("explore");
     const { data } = await supabase
@@ -575,15 +654,15 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     setDiscover((data ?? []) as unknown as Server[]);
   }
 
-  async function addFriend(username: string) {
-    const result = await sendFriendRequest(supabase, username);
+  async function addFriend(username: string, note?: string) {
+    const result = await sendFriendRequest(supabase, username, note);
     if (result.ok) await loadSocial();
     return result;
   }
 
   async function copyInvite() {
     if (!server) return;
-    const url = `${window.location.origin}/channels?invite=${server.invite_code}`;
+    const url = `${window.location.origin}/channels/@me?invite=${server.invite_code}`;
     try {
       await navigator.clipboard.writeText(url);
       setInviteCopied(true);
@@ -630,6 +709,289 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     if (error) setDmMessages(snapshot);
   }
 
+  /* --------------------------- v4: group DMs ---------------------------- */
+  const loadGroups = useCallback(async () => {
+    const list = await fetchGroupDms(supabase, profile.id);
+    setGroups(list);
+    return list;
+  }, [supabase, profile.id]);
+
+  useEffect(() => {
+    void loadGroups();
+  }, [loadGroups]);
+
+  const openGroup = useCallback(
+    async (groupId: string) => {
+      setView("home");
+      setActiveServerId(null);
+      setActiveDmId(null);
+      setActiveGroupId(groupId);
+      setHomeTab("friends");
+      const rows = await fetchGroupMessages(supabase, groupId);
+      setGroupMessages(rows);
+      await markGroupRead(supabase, groupId, profile.id);
+      router.push("/channels/@me");
+    },
+    [supabase, profile.id, router],
+  );
+
+  async function createGroup(memberIds: string[], name: string) {
+    setBusy(true);
+    const { group, error } = await createGroupDm(supabase, profile.id, memberIds, name);
+    setBusy(false);
+    if (!group) {
+      flash(error ?? "Couldn't create that group.");
+      return;
+    }
+    setDialog(null);
+    await loadGroups();
+    await openGroup(group.id);
+    flash(`Created ${group.name ?? "group"}`);
+  }
+
+  async function sendGroupMsg(content: string) {
+    if (!activeGroupId) return;
+    const optimistic: DirectMessage = {
+      id: `tmp-${crypto.randomUUID()}`,
+      dm_channel_id: activeGroupId,
+      author_id: profile.id,
+      content,
+      created_at: new Date().toISOString(),
+      edited_at: null,
+      read_at: null,
+      author: {
+        id: profile.id,
+        username: profile.username,
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+        accent_color: profile.accent_color,
+      },
+    };
+    setGroupMessages((prev) => [...prev, optimistic]);
+    const saved = await sendGroupMessage(supabase, activeGroupId, profile.id, content);
+    if (saved) {
+      setGroupMessages((prev) => prev.map((m) => (m.id === optimistic.id ? saved : m)));
+    } else {
+      setGroupMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+      flash("Message failed to send.");
+    }
+    void loadGroups();
+  }
+
+  async function saveGroupIcon(iconUrl: string | null) {
+    const target = groupIconTarget ?? activeGroupId;
+    if (!target) return;
+    setBusy(true);
+    const { error } = await updateGroupDm(supabase, target, {
+      icon_url: iconUrl,
+      name: groups.find((g) => g.id === target)?.name ?? null,
+    });
+    setBusy(false);
+    if (error) {
+      flash("Couldn't update the group icon.");
+      return;
+    }
+    setGroupIconTarget(null);
+    await loadGroups();
+    flash("Group icon updated");
+  }
+
+  /* ------------------------- v4: timed presence ------------------------- */
+  const setPresence = useCallback(
+    async (nextStatus: Presence, duration: StatusDuration) => {
+      const expiry = durationToExpiry(duration);
+      const previous = { status, expiresAt: statusExpiresAt };
+      setStatus(nextStatus);
+      setStatusExpiresAt(expiry);
+      setProfile((prev) => ({ ...prev, status: nextStatus, status_expires_at: expiry }));
+      const { error } = await supabase
+        .from("profiles")
+        .update({ status: nextStatus, status_expires_at: expiry })
+        .eq("id", profile.id);
+      if (error) {
+        setStatus(previous.status);
+        setStatusExpiresAt(previous.expiresAt);
+        flash("Couldn't update your status.");
+        return;
+      }
+      flash(`${nextStatus === "dnd" ? "Do Not Disturb" : nextStatus.charAt(0).toUpperCase() + nextStatus.slice(1)}${expiry ? " · timed" : ""}`);
+    },
+    [supabase, profile.id, status, statusExpiresAt, flash],
+  );
+
+  // Auto-revert when a timer lapses while the app is open.
+  useEffect(() => {
+    if (!statusExpiresAt) return;
+    const delay = new Date(statusExpiresAt).getTime() - Date.now();
+    if (delay <= 0) {
+      void setPresence("online", "forever");
+      return;
+    }
+    const id = setTimeout(() => void setPresence("online", "forever"), delay + 250);
+    return () => clearTimeout(id);
+  }, [statusExpiresAt, setPresence]);
+
+  /* --------------------------- v4: accounts ---------------------------- */
+  useEffect(() => {
+    setAccounts([
+      {
+        id: profile.id,
+        email: initial.email,
+        username: profile.username,
+        display_name: profile.display_name || profile.username,
+        avatar_url: profile.avatar_url,
+        accent_color: profile.accent_color,
+        active: true,
+      },
+      {
+        id: "secondary-sol",
+        email: "sol@btcomms.test",
+        username: "sol",
+        display_name: "Sol",
+        avatar_url: null,
+        accent_color: "#22c55e",
+        active: false,
+      },
+    ]);
+  }, [profile, initial.email]);
+
+  async function switchAccount(accountId: string) {
+    const account = accounts.find((a) => a.id === accountId);
+    if (!account || account.active) return;
+    await supabase.auth.signOut();
+    router.push(`/login?next=${encodeURIComponent(pathname || "/channels/@me")}&email=${encodeURIComponent(account.email)}`);
+  }
+
+  /* ------------------------ v4: voice preferences ---------------------- */
+  const voiceSettings: VoiceSettings = {
+    inputDevice: profile.voice_settings?.inputDevice,
+    outputDevice: profile.voice_settings?.outputDevice,
+    inputVolume: profile.voice_settings?.inputVolume,
+    outputVolume: profile.voice_settings?.outputVolume,
+    ...(profile.user_settings
+      ? {
+          inputDevice: profile.user_settings.voiceInputDevice,
+          outputDevice: profile.user_settings.voiceOutputDevice,
+          inputVolume: profile.user_settings.voiceInputVolume,
+          outputVolume: profile.user_settings.voiceOutputVolume,
+        }
+      : {}),
+  };
+
+  const patchVoice = useCallback(
+    (patch: Partial<VoiceSettings>) => {
+      // Voice prefs persist in the same user_settings blob as the panels.
+      const nextSettings = {
+        ...(profile.user_settings ?? {}),
+        ...(patch.inputDevice !== undefined ? { voiceInputDevice: patch.inputDevice } : {}),
+        ...(patch.outputDevice !== undefined ? { voiceOutputDevice: patch.outputDevice } : {}),
+        ...(patch.inputVolume !== undefined ? { voiceInputVolume: patch.inputVolume } : {}),
+        ...(patch.outputVolume !== undefined ? { voiceOutputVolume: patch.outputVolume } : {}),
+      };
+      setProfile((prev) => ({ ...prev, user_settings: nextSettings }));
+      void updateProfile(supabase, profile.id, { user_settings: nextSettings });
+    },
+    [profile, supabase],
+  );
+
+  function previewSound(id: string) {
+    const sounds: Record<string, string> = {
+      deafen: "deafen",
+      undeafen: "undeafen",
+      mute: "mute",
+      unmute: "unmute",
+      camera: "camera",
+    };
+    const mapped = sounds[id] ?? "message";
+    playSound(mapped as Parameters<typeof playSound>[0], 0.8);
+  }
+
+  /* ------------------------ v4: server lifecycle ----------------------- */
+  function startServerWizard(template: ServerTemplate | null) {
+    setWizardTemplate(template);
+    setWizardStep(1);
+    setServerName(template ? `${profile.display_name || profile.username}'s ${template.name.toLowerCase()}` : `${profile.display_name || profile.username}'s server`);
+    setServerIcon(template?.emoji ?? "🚀");
+    setFormError(null);
+    setDialog("wizard");
+  }
+
+  async function createServerFromWizard(name: string, _icon: string | null, template: ServerTemplate | null) {
+    setBusy(true);
+    setFormError(null);
+
+    const { data: created, error } = await supabase
+      .from("servers")
+      .insert({ name, icon: serverIcon, owner_id: profile.id })
+      .select("id, name, icon, description, invite_code, is_default, owner_id")
+      .single<Server>();
+
+    if (error || !created) {
+      setFormError(error?.message ?? "Could not create the server.");
+      setBusy(false);
+      return;
+    }
+
+    await supabase
+      .from("server_members")
+      .insert({ server_id: created.id, user_id: profile.id, role: "owner" });
+
+    const seed = template?.channels ?? [
+      { name: "general", kind: "text" as const, topic: `Welcome to ${name}.` },
+      { name: "General", kind: "voice" as const },
+    ];
+    await supabase.from("channels").insert(
+      seed.map((channel, index) => ({
+        server_id: created.id,
+        name: channel.name.toLowerCase().replace(/\s+/g, "-"),
+        kind: channel.kind,
+        topic: channel.topic ?? null,
+        position: index,
+      })),
+    );
+
+    // Mint the first shareable invite so "Invite to Server" always works.
+    await supabase.rpc("create_server_invite", { p_server: created.id });
+
+    setServers((prev) => [...prev, created]);
+    setBusy(false);
+    setDialog(null);
+    setOnboardingServerId(created.id);
+    flash(`Created ${name}`);
+    await openServer(created.id);
+  }
+
+  async function joinWithInvite(code: string) {
+    setBusy(true);
+    setFormError(null);
+    const { data, error } = await supabase.rpc("redeem_server_invite", { p_code: code });
+    const row = Array.isArray(data) ? data[0] : null;
+    const serverId: string | null = row?.server_id ?? null;
+
+    if (error || !serverId) {
+      setBusy(false);
+      setFormError("That invite code doesn't match a server.");
+      return;
+    }
+
+    const { data: found } = await supabase
+      .from("servers")
+      .select("id, name, icon, description, invite_code, is_default, owner_id")
+      .eq("id", serverId)
+      .maybeSingle<Server>();
+
+    setBusy(false);
+    setDialog(null);
+    setJoiningCode("");
+    if (found && !servers.some((s) => s.id === found.id)) {
+      setServers((prev) => [...prev, found]);
+      flash(`Joined ${found.name}`);
+    } else {
+      flash("You're already in that server.");
+    }
+    await openServer(serverId);
+  }
+
   const pendingCount = incoming.length;
   const onlineFriends = friends.filter((f) => (f.profile.status ?? "offline") !== "offline");
 
@@ -656,8 +1018,33 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     [onlineFriends, activities],
   );
 
+  const titleUnread = dmChannels.reduce((sum, d) => sum + (d.unread_count ?? 0), 0) +
+    groups.reduce((sum, g) => sum + (g.unread_count ?? 0), 0);
+  const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
+  const activeChannelsForTitle = activeGroup
+    ? activeGroup.name ?? defaultGroupName(activeGroup.members, profile.id)
+    : activeDm?.peer?.display_name ?? activeDm?.peer?.username ?? null;
+
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-void" data-theme-surface>
+      <ViewTitle
+        view={
+          onboardingServerId && onboardingServerId === activeServerId
+            ? "onboarding"
+            : view === "home"
+              ? activeDm || activeGroup
+                ? "dm"
+                : homeTab === "friends"
+                  ? "friends"
+                  : homeTab === "store"
+                    ? "store"
+                    : "discover"
+              : "server"
+        }
+        channelName={view === "home" ? activeChannelsForTitle : activeChannel?.name}
+        serverName={view === "home" ? null : server?.name}
+        unread={titleUnread}
+      />
       <ServerRail
         servers={servers}
         activeServerId={view === "home" ? null : activeServerId}
@@ -666,6 +1053,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           setDialog("server");
         }}
         onExplore={() => void openExplore()}
+        onJoinServer={() => setDialog("join")}
         onSelect={(id) => void openServer(id)}
         onHome={openHome}
         homeUnread={dmChannels.reduce((sum, d) => sum + (d.unread_count ?? 0), 0)}
@@ -682,7 +1070,52 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               setHomeTab(tab);
               setActiveDmId(null);
             }}
-            onSelectDm={(id) => setActiveDmId(id)}
+            onSelectDm={(id) => {
+              setActiveGroupId(null);
+              setActiveDmId(id);
+              const peerId = dmChannels.find((d) => d.id === id)?.peer?.id;
+              if (peerId) router.push(`/channels/@me/${peerId}`);
+            }}
+            groups={groups}
+            activeGroupId={activeGroupId}
+            onSelectGroup={(id) => void openGroup(id)}
+            onOpenNewMessage={() => {
+              setNewDmSearch("");
+              setDialog("newmessage");
+            }}
+            status={status}
+            statusExpiresAt={statusExpiresAt}
+            onSetStatus={(next, duration) => void setPresence(next, duration)}
+            voice={voiceSettings}
+            onVoiceChange={patchVoice}
+            onOpenVoiceSettings={() => {
+              setSettingsSection("voice");
+              setSettingsOpen(true);
+            }}
+            onOpenProfile={() => {
+              setEditingProfileId(profile.id);
+              setProfileEditorOpen(true);
+            }}
+            onSwitchAccounts={() => setDialog("accounts")}
+            onCopyUserId={() => {
+              void navigator.clipboard?.writeText(profile.id).catch(() => undefined);
+              flash("User ID copied");
+            }}
+            muted={muted}
+            deafened={deafened}
+            onToggleMute={() => {
+              const next = !muted;
+              setMuted(next);
+              if (!next) setDeafened(false);
+              previewSound(next ? "mute" : "unmute");
+            }}
+            onToggleDeafen={() => {
+              const next = !deafened;
+              setDeafened(next);
+              if (next) setMuted(true);
+              previewSound(next ? "deafen" : "undeafen");
+            }}
+            onPreviewSound={previewSound}
             onOpenDm={() => {
               setNewDmSearch("");
               setDialog("newdm");
@@ -706,7 +1139,11 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 outgoing={outgoing}
                 activities={activities}
                 onOpenDm={(userId) => void openDm(userId)}
-                onAddFriend={addFriend}
+                onAddFriend={(username, note) => addFriend(username, note)}
+                onExploreServers={() => {
+                  setHomeTab("discover");
+                  setActiveDmId(null);
+                }}
                 onRespond={async (id, accept) => {
                   await respondToRequest(supabase, id, accept);
                   await loadSocial();
@@ -733,6 +1170,34 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             />
           )}
 
+          {homeTab === "friends" && activeGroup && (
+            <DmView
+              channel={
+                {
+                  id: activeGroup.id,
+                  peer: null,
+                  created_at: activeGroup.created_at,
+                  last_message: activeGroup.last_message ?? null,
+                  unread_count: 0,
+                } as unknown as DmChannel
+              }
+              messages={groupMessages}
+              profile={profile}
+              onSend={(content) => void sendGroupMsg(content)}
+              onDelete={(id) => setGroupMessages((prev) => prev.filter((m) => m.id !== id))}
+              onOpenProfile={(userId) => void openProfile(userId)}
+              group={{
+                id: activeGroup.id,
+                name: activeGroup.name,
+                icon_url: activeGroup.icon_url,
+                members: activeGroup.members,
+                owner_id: activeGroup.owner_id,
+              }}
+              onInviteToGroup={() => setDialog("newmessage")}
+              onEditGroup={() => setDialog("group-icon")}
+            />
+          )}
+
           {homeTab === "store" && <StoreView />}
           {homeTab === "discover" && (
             <DiscoverView
@@ -753,6 +1218,103 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               profile={profile}
               canManage={canManage}
               onSelectChannel={(id) => void loadChannel(id)}
+              isNewServer={onboardingServerId === server.id}
+              showAllChannels={showAllChannels}
+              hideMutedChannels={hideMutedChannels}
+              onToggleShowAll={setShowAllChannels}
+              onToggleHideMuted={setHideMutedChannels}
+              onQuickCreate={(category, kind) => {
+                setCategoryTarget(category);
+                setChannelKind(kind);
+                setChannelName("");
+                setFormError(null);
+                setDialog("channel");
+              }}
+              onServerAction={(action) => {
+                switch (action) {
+                  case "invite":
+                    setDialog("invite");
+                    break;
+                  case "apps":
+                    flash("App Directory is coming soon.");
+                    break;
+                  case "notifications":
+                  case "privacy":
+                    setSettingsSection("notifications");
+                    setSettingsOpen(true);
+                    break;
+                  case "edit-profile":
+                    setEditingProfileId(profile.id);
+                    setProfileEditorOpen(true);
+                    break;
+                  case "leave":
+                    void leaveServer();
+                    break;
+                  case "copy-info":
+                    void navigator.clipboard?.writeText(server.id).catch(() => undefined);
+                    flash("Server ID copied");
+                    break;
+                  case "settings":
+                    flash("Server Settings open in the admin panel.");
+                    break;
+                  case "insights":
+                    flash("Server Insights is warming up.");
+                    break;
+                  case "create-channel":
+                    setChannelKind("text");
+                    setChannelName("");
+                    setDialog("channel");
+                    break;
+                  case "create-category":
+                    setCategoryTarget("New Category");
+                    setDialog("channel");
+                    break;
+                  case "create-event":
+                    flash("Event creation is coming soon.");
+                    break;
+                  case "security":
+                    flash("Security Actions opened.");
+                    break;
+                  case "report-raid":
+                    flash("Raid reported to trust & safety.");
+                    break;
+                  default:
+                    break;
+                }
+              }}
+              status={status}
+              statusExpiresAt={statusExpiresAt}
+              onSetStatus={(next, duration) => void setPresence(next, duration)}
+              voice={voiceSettings}
+              onVoiceChange={patchVoice}
+              onOpenVoiceSettings={() => {
+                setSettingsSection("voice");
+                setSettingsOpen(true);
+              }}
+              onOpenProfile={() => {
+                setEditingProfileId(profile.id);
+                setProfileEditorOpen(true);
+              }}
+              onSwitchAccounts={() => setDialog("accounts")}
+              onCopyUserId={() => {
+                void navigator.clipboard?.writeText(profile.id).catch(() => undefined);
+                flash("User ID copied");
+              }}
+              muted={muted}
+              deafened={deafened}
+              onToggleMute={() => {
+                const next = !muted;
+                setMuted(next);
+                if (!next) setDeafened(false);
+                previewSound(next ? "mute" : "unmute");
+              }}
+              onToggleDeafen={() => {
+                const next = !deafened;
+                setDeafened(next);
+                if (next) setMuted(true);
+                previewSound(next ? "deafen" : "undeafen");
+              }}
+              onPreviewSound={previewSound}
               onSelectVoice={() => setDialog("invite")}
               onOpenSettings={() => setSettingsOpen(true)}
               onJoinVoice={(id) => void joinVoice(id)}
@@ -766,7 +1328,46 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             />
           )}
 
-          {activeChannel && server && (
+          {server && onboardingServerId === server.id && (
+            <OnboardingView
+              serverName={server.name}
+              initials={initialsFor(server.name)}
+              isOwner={canManage}
+              template={wizardTemplate}
+              onDismiss={() => {
+                setOnboardingServerId(null);
+                void loadChannel(activeChannelId);
+              }}
+              onAction={(id) => {
+                switch (id) {
+                  case "invite":
+                    setDialog("invite");
+                    break;
+                  case "icon":
+                    setDialog("server");
+                    break;
+                  case "message":
+                    setOnboardingServerId(null);
+                    void loadChannel(activeChannelId);
+                    break;
+                  case "download":
+                    window.open("https://btcomms.gg/download", "_blank", "noopener");
+                    break;
+                  case "app":
+                    flash("Browse apps in the App Directory.");
+                    break;
+                  case "boost":
+                    setSettingsSection("boost");
+                    setSettingsOpen(true);
+                    break;
+                  default:
+                    break;
+                }
+              }}
+            />
+          )}
+
+          {activeChannel && server && onboardingServerId !== server.id && (
             <MessageFeed
               key={`${activeServerId}:${activeChannelId}`}
               supabase={supabase}
@@ -807,6 +1408,8 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           setStatus(next.status);
         }}
         pendingRequests={pendingCount}
+        initialSection={settingsSection}
+        onPreviewSound={previewSound}
         onEditProfile={() => {
           setSettingsOpen(false);
           setEditingProfileId(profile.id);
@@ -909,115 +1512,84 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         )}
       </Modal>
 
-      {/* New DM picker */}
-      <Modal
-        open={dialog === "newdm"}
-        title="Start a conversation"
-        description="Pick a friend to open a direct message."
+      {/* New Message — 1:1 or group DM */}
+      <NewMessageModal
+        open={dialog === "newmessage"}
         onClose={() => setDialog(null)}
-      >
-        <div className="space-y-3">
-          <input
-            value={newDmSearch}
-            onChange={(e) => setNewDmSearch(e.target.value)}
-            placeholder="Search friends…"
-            className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-[13px] outline-none focus:border-blurple/60"
-          />
-          <ul className="max-h-72 space-y-1 overflow-y-auto scroll-thin">
-            {friends
-              .filter(
-                (f) =>
-                  !newDmSearch.trim() ||
-                  (f.profile.display_name ?? "").toLowerCase().includes(newDmSearch.toLowerCase()) ||
-                  f.profile.username.toLowerCase().includes(newDmSearch.toLowerCase()),
-              )
-              .map((friend) => {
-                const name = friend.profile.display_name || friend.profile.username;
-                return (
-                  <li key={friend.friendshipId}>
-                    <button
-                      onClick={() => {
-                        setDialog(null);
-                        void openDm(friend.profile.id);
-                      }}
-                      className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-hover/60"
-                    >
-                      <Avatar
-                        name={name}
-                        src={friend.profile.avatar_url}
-                        accent={friend.profile.accent_color}
-                        size={34}
-                        status={(friend.profile.status as Presence) ?? "offline"}
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13.5px] font-semibold text-bright">{name}</span>
-                        <span className="block truncate text-[11.5px] text-dim">@{friend.profile.username}</span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            {friends.length === 0 && (
-              <li className="py-6 text-center text-[12.5px] text-dim">
-                {socialLoading ? "Loading friends…" : "Add a friend first to start a DM."}
-              </li>
-            )}
-          </ul>
-        </div>
-      </Modal>
+        profile={profile}
+        friends={friends.map((f) => f.profile)}
+        serverMembers={members.map((m) => m.profile).filter(Boolean) as Profile[]}
+        busy={busy}
+        onStartDm={(userId) => {
+          setDialog(null);
+          void openDm(userId);
+        }}
+        onCreateGroup={(memberIds, name) => void createGroup(memberIds, name)}
+      />
 
-      {/* Create server */}
-      <Modal
+      {/* Create Your Server */}
+      <CreateServerModal
         open={dialog === "server"}
-        title="Create a server"
-        description="Your server is a place for you and your friends to hang out."
         onClose={() => setDialog(null)}
-        footer={
-          <>
-            <button onClick={() => setDialog(null)} className="rounded-lg px-3 py-1.5 text-[12.5px] text-muted transition hover:text-bright">
-              Cancel
-            </button>
-            <button
-              onClick={() => void createServer()}
-              disabled={busy || !serverName.trim()}
-              className="rounded-lg bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
-            >
-              {busy ? "Creating…" : "Create server"}
-            </button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div>
-            <p className="mb-2 text-[11px] font-semibold tracking-widest text-muted uppercase">Pick an icon</p>
-            <div className="flex flex-wrap gap-1.5">
-              {["🚀", "🎨", "🎮", "🎧", "⚡", "🛠️", "📚", "🌊", "🔥", "🧠"].map((emoji) => (
-                <button
-                  key={emoji}
-                  onClick={() => setServerIcon(emoji)}
-                  aria-pressed={serverIcon === emoji}
-                  className={`grid h-10 w-10 place-items-center rounded-xl text-lg transition ${
-                    serverIcon === emoji ? "bg-blurple/25 ring-2 ring-blurple" : "bg-raised hover:bg-hover"
-                  }`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </div>
-          <label className="block">
-            <span className="mb-1.5 block text-[11px] font-semibold tracking-widest text-muted uppercase">Server name</span>
-            <input
-              value={serverName}
-              onChange={(e) => setServerName(e.target.value)}
-              maxLength={60}
-              placeholder="Design Guild"
-              className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-blurple/60"
-            />
-          </label>
-          {formError && <p className="text-[12px] text-rose">{formError}</p>}
-        </div>
-      </Modal>
+        onStart={(template) => startServerWizard(template)}
+        onJoinInstead={() => setDialog("join")}
+      />
+
+      {/* Two-step creation wizard */}
+      <ServerWizardModal
+        open={dialog === "wizard"}
+        step={wizardStep}
+        onClose={() => setDialog(null)}
+        onBack={() => {
+          if (wizardStep === 2) setWizardStep(1);
+          else setDialog("server");
+        }}
+        onNext={(intent) => {
+          setWizardIntent(intent);
+          setWizardStep(2);
+        }}
+        onSkip={() => setWizardStep(2)}
+        onFinish={(name, icon) => void createServerFromWizard(name, icon, wizardTemplate)}
+        defaultName={serverName}
+        template={wizardTemplate}
+        busy={busy}
+        error={formError}
+      />
+
+      {/* Join a Server */}
+      <JoinServerModal
+        open={dialog === "join"}
+        onClose={() => setDialog(null)}
+        onJoin={(code) => void joinWithInvite(code)}
+        busy={busy}
+        error={formError}
+        onDiscover={() => {
+          setDialog(null);
+          void openExplore();
+        }}
+      />
+
+      {/* Manage Accounts */}
+      <ManageAccountsModal
+        open={dialog === "accounts"}
+        onClose={() => setDialog(null)}
+        accounts={accounts}
+        onSwitch={(id) => void switchAccount(id)}
+        onAddAccount={() => {
+          setDialog(null);
+          router.push("/login?next=/channels/@me");
+        }}
+        busy={busy}
+      />
+
+      {/* Change group icon */}
+      <ChangeIconModal
+        open={dialog === "group-icon"}
+        onClose={() => setDialog(null)}
+        currentIcon={activeGroup?.icon_url ?? null}
+        onSave={(iconUrl) => void saveGroupIcon(iconUrl)}
+        busy={busy}
+      />
 
       {/* Create channel */}
       <Modal
@@ -1095,7 +1667,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         <div className="space-y-4">
           <div className="flex items-center gap-2 rounded-lg border border-line bg-ink px-2.5 py-1.5">
             <code className="min-w-0 flex-1 truncate font-mono text-[12px] text-muted">
-              btcomms.gg/channels?invite={server?.invite_code}
+              btcomms.gg/invite/{server?.invite_code}
             </code>
             <button
               onClick={() => void copyInvite()}
@@ -1120,7 +1692,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 className="w-full rounded-lg border border-line bg-ink px-3 py-2 font-mono text-[12.5px] outline-none focus:border-blurple/60"
               />
               <button
-                onClick={() => void joinByInvite(joiningCode)}
+                onClick={() => void joinWithInvite(joiningCode)}
                 disabled={busy || !joiningCode.trim()}
                 className="shrink-0 rounded-lg border border-line bg-raised px-3 py-2 text-[12px] font-semibold transition hover:bg-hover disabled:opacity-50"
               >
@@ -1150,7 +1722,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                   <p className="truncate text-[11.5px] text-dim">{candidate.description}</p>
                 </div>
                 <button
-                  onClick={() => void joinByInvite(candidate.invite_code)}
+                  onClick={() => void joinWithInvite(candidate.invite_code)}
                   disabled={already || busy}
                   className="shrink-0 rounded-lg bg-blurple px-2.5 py-1.5 text-[11.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:bg-raised disabled:text-dim"
                 >

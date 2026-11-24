@@ -1,10 +1,49 @@
 "use client";
 
-export type SoundId = "message" | "channel" | "ring" | "join" | "leave";
+export type SoundId =
+  | "message"
+  | "channel"
+  | "ring"
+  | "join"
+  | "leave"
+  | "mute"
+  | "unmute"
+  | "deafen"
+  | "undeafen"
+  | "camera";
 
 type Note = { freq: number; start: number; duration: number; gain?: number; type?: OscillatorType };
 
 const RECIPES: Record<SoundId, { notes: Note[]; label: string }> = {
+  mute: {
+    label: "Mute",
+    notes: [{ freq: 494, start: 0, duration: 0.1, gain: 0.13 }],
+  },
+  unmute: {
+    label: "Unmute",
+    notes: [{ freq: 740, start: 0, duration: 0.11, gain: 0.13 }],
+  },
+  deafen: {
+    label: "Deafen",
+    notes: [
+      { freq: 392, start: 0, duration: 0.1, gain: 0.13 },
+      { freq: 294, start: 0.08, duration: 0.14, gain: 0.11 },
+    ],
+  },
+  undeafen: {
+    label: "Undeafen",
+    notes: [
+      { freq: 294, start: 0, duration: 0.1, gain: 0.12 },
+      { freq: 440, start: 0.08, duration: 0.14, gain: 0.13 },
+    ],
+  },
+  camera: {
+    label: "Camera on",
+    notes: [
+      { freq: 587.33, start: 0, duration: 0.08, gain: 0.12 },
+      { freq: 880, start: 0.07, duration: 0.12, gain: 0.11 },
+    ],
+  },
   message: {
     label: "New message",
     notes: [
@@ -92,10 +131,12 @@ export function playSound(id: SoundId, volume = 1) {
   window.setTimeout(() => master.disconnect(), 1400);
 }
 
-export const SOUND_LABELS: Record<SoundId, string> = {
-  message: RECIPES.message.label,
-  channel: RECIPES.channel.label,
-  ring: RECIPES.ring.label,
-  join: RECIPES.join.label,
-  leave: RECIPES.leave.label,
-};
+export const SOUND_LABELS: Record<SoundId, string> = Object.fromEntries(
+  Object.entries(RECIPES).map(([id, recipe]) => [id, recipe.label]),
+) as Record<SoundId, string>;
+
+/** Plays a call sound only when the matching preference is still enabled. */
+export function previewCallSound(id: string, volume = 1) {
+  if (!(id in RECIPES)) return;
+  playSound(id as SoundId, volume);
+}

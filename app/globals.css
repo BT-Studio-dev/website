@@ -133,6 +133,81 @@
     );
   }
 
+  /* ------------------------------------------------------------------ */
+  /* 2026 ambient stage: three soft light pools behind translucent glass  */
+  /* ------------------------------------------------------------------ */
+  .ambient-stage {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--c-void);
+  }
+
+  /* Painted by ::before so the gradient never scrolls with feed content. */
+  .ambient-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(58rem 40rem at 6% -8%, var(--ambient-1, rgba(168, 85, 247, 0.42)), transparent 68%),
+      radial-gradient(52rem 38rem at 96% 108%, var(--ambient-2, rgba(251, 146, 60, 0.24)), transparent 66%),
+      radial-gradient(70rem 50rem at 52% 46%, var(--ambient-3, rgba(16, 12, 26, 0.9)), transparent 78%),
+      linear-gradient(165deg, color-mix(in oklab, var(--c-accent) 12%, var(--c-void)), var(--c-void) 60%);
+  }
+
+  /* Slow-drifting aurora ribbons layered on top of the pools. */
+  .ambient-stage::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image:
+      conic-gradient(from 0deg at 30% 30%, transparent 0deg, var(--ambient-1, rgba(168,85,247,0.35)) 90deg, transparent 200deg),
+      conic-gradient(from 140deg at 74% 68%, transparent 0deg, var(--ambient-2, rgba(251,146,60,0.28)) 110deg, transparent 240deg);
+    filter: blur(70px) saturate(125%);
+    animation: ambientDrift 38s ease-in-out infinite alternate;
+  }
+
+  [data-motion="reduced"] .ambient-stage::after {
+    animation: none;
+  }
+
+  @keyframes ambientDrift {
+    from {
+      transform: translate3d(-2%, -1%, 0) rotate(-3deg) scale(1.02);
+    }
+    to {
+      transform: translate3d(3%, 2%, 0) rotate(4deg) scale(1.08);
+    }
+  }
+
+  /* Dark translucent glass used by sidebars, headers and input bars. */
+  .glass-panel {
+    background: color-mix(in oklab, var(--c-abyss) 62%, transparent);
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+  }
+
+  .glass-bar {
+    background: color-mix(in oklab, var(--c-ink) 58%, transparent);
+    backdrop-filter: blur(20px) saturate(145%);
+    -webkit-backdrop-filter: blur(20px) saturate(145%);
+    border-color: color-mix(in oklab, var(--c-bright) 8%, transparent);
+  }
+
+  /* Floating pill composer. */
+  .composer-pill {
+    background: color-mix(in oklab, var(--c-panel) 88%, transparent);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, var(--c-bright) 7%, transparent) inset,
+      0 18px 40px -22px rgba(0, 0, 0, 0.85);
+  }
+
   .accent-gradient {
     background-image: linear-gradient(
       135deg,

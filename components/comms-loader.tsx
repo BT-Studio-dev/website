@@ -16,6 +16,7 @@ import { CommsApp } from "@/components/comms-app";
 import { BoltIcon } from "@/components/icons";
 import { DemoApp } from "@/components/demo/demo-app";
 import { isSupabaseReachable } from "@/lib/probe";
+import { LoadingScreen } from "@/components/loading-screen";
 
 type State =
   | { phase: "loading" }
@@ -191,17 +192,19 @@ export function CommsLoader({
 
   if (state.phase === "loading") {
     return (
-      <div className="grid h-dvh place-items-center bg-void">
-        <div className="flex flex-col items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-blurple-soft to-blurple text-white shadow-lg shadow-blurple/30">
-            <BoltIcon width={20} height={20} strokeWidth={2.2} />
-          </span>
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-blurple" />
-          <p className="text-[10px] tracking-[0.18em] text-dim uppercase">
-            Connecting to BT Comms
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        onFallback={() => {
+          // The connection never settled — drop into demo mode rather than
+          // leaving the user staring at a spinner forever.
+          loadedFor.current = "";
+          setDemoReason("timeout");
+          setDemo(true);
+        }}
+        onRetry={() => {
+          loadedFor.current = "";
+          void load();
+        }}
+      />
     );
   }
 

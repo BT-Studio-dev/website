@@ -85,8 +85,11 @@ export async function fetchFriends(supabase: SupabaseClient): Promise<{
 export async function sendFriendRequest(
   supabase: SupabaseClient,
   username: string,
+  note?: string,
 ): Promise<{ ok: boolean; message: string; status?: string }> {
   const cleaned = username.trim().replace(/^@/, "");
+  // The optional personal note rides along with the friendship row.
+  const trimmedNote = note?.trim().slice(0, 120) || null;
   if (!cleaned) return { ok: false, message: "Enter a username first." };
 
   const { data, error } = await supabase.rpc("send_friend_request", {
@@ -109,6 +112,7 @@ export async function sendFriendRequest(
       requester_id: myId,
       addressee_id: found.id,
       status: "pending",
+      ...(trimmedNote ? { note: trimmedNote } : {}),
     });
     if (insertError) {
       return {

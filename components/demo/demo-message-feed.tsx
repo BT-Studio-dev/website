@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { MessageContent } from "@/components/message-content";
-import { HashIcon, SendIcon, TrashIcon, UsersIcon, SearchIcon } from "@/components/icons";
+import { HashIcon, TrashIcon, UsersIcon, SearchIcon } from "@/components/icons";
+import { ChatComposer } from "@/components/chat-composer";
 import { formatDayLabel, formatTimestamp, formatTime, sameDay, shouldGroup } from "@/lib/format";
 import type { Channel, Message, Profile, Server, ServerMember } from "@/lib/types";
 
@@ -33,7 +34,7 @@ export function DemoMessageFeed({
   onSend: (content: string) => void;
   onDelete: (id: string) => void;
 }) {
-  const [draft, setDraft] = useState("");
+  const [, setDraft] = useState("");
   const [search, setSearch] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -64,8 +65,8 @@ export function DemoMessageFeed({
     node.scrollTop = node.scrollHeight;
   }, [channel.id, messages.length]);
 
-  function submit() {
-    const content = draft.trim();
+  function submit(explicit?: string) {
+    const content = (explicit ?? "").trim();
     if (!content) return;
     onSend(content);
     setDraft("");
@@ -73,8 +74,8 @@ export function DemoMessageFeed({
   }
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-panel/25">
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line/70 bg-panel/50 px-4 backdrop-blur">
+    <section className="ambient-stage flex min-w-0 flex-1 flex-col">
+      <header className="glass-bar flex h-12 shrink-0 items-center gap-2 border-b px-4">
         <HashIcon width={18} height={18} className="shrink-0 text-muted" />
         <h2 className="truncate text-[14.5px] font-semibold tracking-tight text-bright">
           {channel.name}
@@ -227,7 +228,7 @@ export function DemoMessageFeed({
                     <span className="text-[11px] text-dim">@{username}</span>
                   )}
                   <div className="mt-0.5">
-                    <MessageContent content={message.content} />
+                    <MessageContent content={message.content} selfId={profile.id} />
                   </div>
                 </div>
 
@@ -248,41 +249,13 @@ export function DemoMessageFeed({
       </div>
 
       <div className="shrink-0 px-4 pb-4">
-        <div className="rounded-xl border border-line bg-ink/90 transition focus-within:border-blurple/50 focus-within:ring-2 focus-within:ring-blurple/15">
-          <div className="flex items-end gap-2 px-3 py-2">
-            <textarea
-              ref={inputRef}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  submit();
-                }
-              }}
-              rows={1}
-              maxLength={MAX_LENGTH}
-              placeholder={`Message #${channel.name}`}
-              aria-label={`Message #${channel.name}`}
-              className="scroll-thin max-h-40 w-full resize-none bg-transparent py-1 text-[14px] leading-relaxed outline-none placeholder:text-dim"
-            />
-            <button
-              onClick={submit}
-              disabled={!draft.trim()}
-              aria-label="Send message"
-              className="mb-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-blurple text-white transition hover:bg-blurple-soft disabled:cursor-not-allowed disabled:bg-raised disabled:text-dim"
-            >
-              <SendIcon width={16} height={16} />
-            </button>
-          </div>
-          <div className="border-t border-line/60 px-3 py-1.5">
-            <p className="text-[10px] text-dim">
-              <span className="font-semibold">Enter</span> to send ·{" "}
-              <span className="font-semibold">Shift + Enter</span> for a new line ·{" "}
-              <span className="font-mono">**bold**</span> <span className="font-mono">`code`</span>
-            </p>
-          </div>
-        </div>
+        <ChatComposer
+          placeholder={`Message #${channel.name}`}
+          ariaLabel={`Message #${channel.name}`}
+          onSubmit={(content) => submit(content)}
+          members={members.map((m) => m.profile).filter(Boolean) as Profile[]}
+          selfId={profile.id}
+        />
       </div>
     </section>
   );

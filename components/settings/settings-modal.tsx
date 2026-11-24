@@ -6,6 +6,7 @@ import { CloseIcon } from "@/components/icons";
 import { SettingsNav, ALL_NAV_ITEMS, type SettingsSectionId } from "@/components/settings/settings-nav";
 import { AccountPanel } from "@/components/settings/account-panel";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
+import { VoiceVideoPanel } from "@/components/settings/voice-panel";
 import {
   AccessibilityPanel,
   AppsPanel,
@@ -14,7 +15,6 @@ import {
   GiftsPanel,
   ProPanel,
   SubscriptionsPanel,
-  VoicePanel,
 } from "@/components/settings/other-panels";
 import {
   DataPrivacyPanel,
@@ -62,6 +62,8 @@ export function SettingsModal({
   pendingRequests,
   onLogout,
   onEditProfile,
+  onPreviewSound,
+  initialSection,
 }: {
   open: boolean;
   onClose: () => void;
@@ -74,8 +76,17 @@ export function SettingsModal({
   onLogout: () => void;
   /** Opens the full Edit Profile studio (guests/demo get a no-op). */
   onEditProfile?: () => void;
+  onPreviewSound?: (id: string) => void;
+  /** Jump straight to a section (Voice Settings links, quick actions…). */
+  initialSection?: SettingsSectionId | "edit-profiles";
 }) {
-  const [section, setSection] = useState<SettingsSectionId | "edit-profiles">("account");
+  const [section, setSection] = useState<SettingsSectionId | "edit-profiles">(
+    initialSection ?? "account",
+  );
+
+  useEffect(() => {
+    if (open && initialSection) setSection(initialSection);
+  }, [open, initialSection]);
   const [query, setQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState<{ tone: "info" | "success" | "error"; text: string } | null>(null);
@@ -284,6 +295,8 @@ export function SettingsModal({
 
               {section === "appearance" && (
                 <AppearancePanel
+                  settings={settings}
+                  onChange={patchSettings}
                   accentColor={accentColor}
                   onAccentChange={(color) => {
                     setAccentColor(color);
@@ -300,10 +313,10 @@ export function SettingsModal({
               {section === "accessibility" && <AccessibilityPanel />}
 
               {section === "voice" && (
-                <VoicePanel
-                  micMuted={false}
-                  onMicMutedChange={() => undefined}
-                  deafened={false}
+                <VoiceVideoPanel
+                  settings={settings}
+                  onChange={patchSettings}
+                  onPreviewSound={onPreviewSound}
                 />
               )}
 

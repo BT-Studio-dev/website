@@ -42,10 +42,11 @@ export type CardProfile = {
 };
 
 const STATUS_COLOR: Record<Presence, string> = {
-  online: "#3ba55d",
-  idle: "#faa61a",
-  dnd: "#ed4245",
-  offline: "#6b7280",
+  online: "#23a55a",
+  idle: "#f0b232",
+  dnd: "#f23f43",
+  invisible: "#80848e",
+  offline: "#80848e",
 };
 
 function initials(name: string) {

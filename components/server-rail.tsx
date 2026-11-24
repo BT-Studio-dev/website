@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { HomeIcon, CompassIcon, PlusIcon } from "@/components/icons";
+import { CompassIcon, DownloadIcon, PlusIcon } from "@/components/icons";
 import type { Server } from "@/lib/types";
+import { initialsFor } from "@/lib/naming";
 
 type Props = {
   servers: Server[];
@@ -19,6 +20,8 @@ type Props = {
   homeUnread?: number;
   /** Force the server list to be treated as the active view. */
   homeActive?: boolean;
+  /** Opened from the `+` menu's "Join a Server" option. */
+  onJoinServer?: () => void;
 };
 
 export function ServerRail({
@@ -31,6 +34,7 @@ export function ServerRail({
   unreadByServer = {},
   homeUnread = 0,
   homeActive,
+  onJoinServer,
 }: Props) {
   const atHome = homeActive ?? activeServerId === null;
 
@@ -70,10 +74,11 @@ export function ServerRail({
           badge={unreadByServer[server.id] ?? 0}
           onClick={onSelect ? () => onSelect(server.id) : undefined}
           href={onSelect ? undefined : `/channels/${server.id}`}
+          initials={!server.icon ? initialsFor(server.name) : undefined}
           icon={
-            <span className="text-lg leading-none">
-              {server.icon || server.name.slice(0, 1).toUpperCase()}
-            </span>
+            server.icon ? (
+              <span className="text-lg leading-none">{server.icon}</span>
+            ) : undefined
           }
         />
       ))}
@@ -90,6 +95,22 @@ export function ServerRail({
         <RailTooltip>Add a Server</RailTooltip>
       </button>
 
+      {/* Join a Server */}
+      {onJoinServer && (
+        <button
+          type="button"
+          onClick={onJoinServer}
+          title="Join a Server"
+          aria-label="Join a Server"
+          className="group relative grid h-9 w-9 shrink-0 place-items-center rounded-[16px] text-[11px] font-bold text-muted transition hover:bg-white/8 hover:text-bright"
+        >
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 8l-5 4 5 4M5 12h11" />
+          </svg>
+          <RailTooltip>Join a Server</RailTooltip>
+        </button>
+      )}
+
       {/* Discover */}
       <button
         type="button"
@@ -101,6 +122,19 @@ export function ServerRail({
         <CompassIcon width={20} height={20} />
         <RailTooltip>Explore Servers</RailTooltip>
       </button>
+
+      {/* Download Apps */}
+      <a
+        href="https://btcomms.gg/download"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Download Apps"
+        aria-label="Download Apps"
+        className="group relative grid h-12 w-12 shrink-0 place-items-center rounded-[24px] bg-raised text-mint transition-all hover:rounded-[16px] hover:bg-mint/20"
+      >
+        <DownloadIcon width={20} height={20} />
+        <RailTooltip>Download Apps</RailTooltip>
+      </a>
     </nav>
   );
 }
@@ -108,13 +142,16 @@ export function ServerRail({
 function RailItem({
   label,
   icon,
+  initials,
   active,
   onClick,
   href,
   badge = 0,
 }: {
   label: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
+  /** Shown instead of an icon when the server has no emoji/icon set. */
+  initials?: string;
   active: boolean;
   onClick?: () => void;
   href?: string;
@@ -140,7 +177,11 @@ function RailItem({
         }`}
         style={active ? { boxShadow: "0 10px 26px -10px rgba(var(--c-glow),.8)" } : undefined}
       >
-        {icon}
+        {initials ? (
+          <span className="text-[12.5px] font-bold tracking-tight text-white">{initials}</span>
+        ) : (
+          icon
+        )}
         {badge > 0 && (
           <span className="absolute -right-1 -bottom-1 grid min-w-[18px] place-items-center rounded-full border-2 border-abyss bg-rose px-1 text-[10px] font-bold text-white">
             {badge > 99 ? "99+" : badge}

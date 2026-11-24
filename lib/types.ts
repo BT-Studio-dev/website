@@ -1,4 +1,4 @@
-export type Presence = "online" | "idle" | "dnd" | "offline";
+export type Presence = "online" | "idle" | "dnd" | "invisible" | "offline";
 
 export type Profile = {
   id: string;
@@ -37,6 +37,11 @@ export type Profile = {
   widgets?: ProfileWidget[];
   user_settings?: UserSettings;
   bt_pro?: boolean;
+  /* v4 — timed presence + chat/voice prefs */
+  status_expires_at?: string | null;
+  icon_pack?: IconPackId;
+  chat_display?: ChatDisplaySettings;
+  voice_settings?: VoiceSettings;
 };
 
 export type Server = {
@@ -106,6 +111,9 @@ export type CustomStatus = {
 };
 
 export type ThemeId =
+  | "ambient"
+  | "charcoal"
+  | "custom"
   | "midnight"
   | "amethyst"
   | "aurora"
@@ -122,7 +130,67 @@ export type Appearance = {
   reduce_motion: boolean;
   reduced_saturation: boolean;
   font_scale: number;
+  /* v4 — custom gradient + icon pack + streamer mode */
+  gradient_from?: string;
+  gradient_to?: string;
+  icon_pack?: IconPackId;
+  streamer_mode?: boolean;
+  streamer_hide_personal?: boolean;
+  streamer_hide_invites?: boolean;
+  streamer_mute_sounds?: boolean;
+  search_scope?: "selected" | "all";
 };
+
+export type IconPackId = "classic" | "neo" | "soft" | "pixel" | "promo-summer" | "promo-space";
+
+/** Chat-display preferences toggled in Appearance. */
+export type ChatDisplaySettings = {
+  showMedia?: boolean;
+  showEmbeds?: boolean;
+  showReactions?: boolean;
+  splitThreads?: boolean;
+  previewMarkup?: boolean;
+  emoticonToEmoji?: boolean;
+  showSendButton?: boolean;
+};
+
+/** Voice & video configuration, persisted per account/device. */
+export type VoiceSettings = {
+  inputDevice?: string;
+  outputDevice?: string;
+  cameraDevice?: string;
+  inputVolume?: number;
+  outputVolume?: number;
+  soundboardVolume?: number;
+  inputProfile?: "voice_isolation" | "studio" | "custom";
+  noiseSuppression?: "krisp" | "standard" | "off";
+  echoCancellation?: boolean;
+  automaticGain?: boolean;
+  pushToTalk?: boolean;
+  pushToTalkKey?: string;
+  showStreamPreviews?: boolean;
+  entranceSoundServer?: string;
+  entranceSound?: string;
+  callSounds?: Record<string, boolean>;
+};
+
+/** Presence menu durations, in milliseconds (null = forever). */
+export type StatusDuration =
+  | "15m"
+  | "1h"
+  | "8h"
+  | "24h"
+  | "3d"
+  | "forever";
+
+export const STATUS_DURATIONS: { id: StatusDuration; label: string; ms: number | null }[] = [
+  { id: "15m", label: "For 15 Minutes", ms: 15 * 60_000 },
+  { id: "1h", label: "For 1 Hour", ms: 60 * 60_000 },
+  { id: "8h", label: "For 8 Hours", ms: 8 * 60 * 60_000 },
+  { id: "24h", label: "For 24 Hours", ms: 24 * 60 * 60_000 },
+  { id: "3d", label: "For 3 Days", ms: 3 * 24 * 60 * 60_000 },
+  { id: "forever", label: "Forever", ms: null },
+];
 
 export type Friendship = {
   id: string;
@@ -277,6 +345,44 @@ export type UserSettings = {
   ttsEnabled?: boolean;
   ttsRate?: number;
   advancedTelemetry?: boolean;
+  /* v4 — Appearance */
+  showMedia?: boolean;
+  showEmbeds?: boolean;
+  showReactions?: boolean;
+  splitThreads?: boolean;
+  previewMarkup?: boolean;
+  emoticonToEmoji?: boolean;
+  showSendButton?: boolean;
+  dmSearchScope?: "selected" | "all";
+  streamerMode?: boolean;
+  streamerHidePersonal?: boolean;
+  streamerHideInvites?: boolean;
+  streamerMuteSounds?: boolean;
+  iconPack?: IconPackId;
+  /* v4 — Voice & Video */
+  voiceInputDevice?: string;
+  voiceOutputDevice?: string;
+  voiceCameraDevice?: string;
+  voiceInputVolume?: number;
+  voiceOutputVolume?: number;
+  voiceSoundboardVolume?: number;
+  voiceInputProfile?: "voice_isolation" | "studio" | "custom";
+  noiseSuppression?: "krisp" | "standard" | "off";
+  echoCancellation?: boolean;
+  automaticGain?: boolean;
+  pushToTalk?: boolean;
+  pushToTalkKey?: string;
+  showStreamPreviews?: boolean;
+  entranceSoundServer?: string;
+  entranceSound?: string;
+  callSoundDeafen?: boolean;
+  callSoundMute?: boolean;
+  callSoundCamera?: boolean;
+  callSoundUndeafen?: boolean;
+  callSoundUnmute?: boolean;
+  lastStatus?: Presence;
+  lastStatusDuration?: StatusDuration;
+
 };
 
 export type BlockedUser = {
@@ -284,4 +390,40 @@ export type BlockedUser = {
   blocked_id: string;
   created_at: string;
   profile: MessageAuthor | null;
+};
+
+/* ------------------------------------------------------------------ */
+/* v4: group DMs, accounts, server invites                             */
+/* ------------------------------------------------------------------ */
+
+export type GroupDm = {
+  id: string;
+  owner_id: string;
+  name: string | null;
+  icon_url: string | null;
+  created_at: string;
+  members: MessageAuthor[];
+  last_message_at: string;
+  last_message?: { content: string; created_at: string; author_id: string } | null;
+  unread_count?: number;
+};
+
+export type LinkedAccount = {
+  id: string;
+  email: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  accent_color: string | null;
+  active: boolean;
+};
+
+export type ServerInvite = {
+  code: string;
+  server_id: string;
+  created_by: string | null;
+  created_at: string;
+  uses: number;
+  max_uses: number | null;
+  expires_at: string | null;
 };

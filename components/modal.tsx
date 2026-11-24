@@ -10,6 +10,8 @@ export function Modal({
   onClose,
   children,
   footer,
+  size = "md",
+  tone = "default",
 }: {
   open: boolean;
   title: string;
@@ -17,6 +19,9 @@ export function Modal({
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
+  /** `brand` gives the multi-step server modals their illustrated header. */
+  tone?: "default" | "brand";
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +44,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -51,9 +56,17 @@ export function Modal({
       />
       <div
         ref={panelRef}
-        className="animate-rise relative w-full max-w-md overflow-hidden rounded-2xl border border-line bg-panel shadow-2xl shadow-black/60"
+        className={`animate-rise relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden rounded-2xl border border-line shadow-2xl shadow-black/60 ${
+          size === "sm"
+            ? "max-w-sm bg-panel"
+            : size === "lg"
+              ? "max-w-lg bg-panel"
+              : size === "xl"
+                ? "max-w-2xl bg-panel"
+                : "max-w-md bg-panel"
+        } ${tone === "brand" ? "border-white/12 bg-[color-mix(in_oklab,var(--c-panel)_92%,transparent)] backdrop-blur-2xl" : ""}`}
       >
-        <header className="flex items-start justify-between gap-3 border-b border-line/70 px-5 py-4">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-line/70 px-5 py-4">
           <div>
             <h2 className="text-[15px] font-semibold tracking-tight text-bright">{title}</h2>
             {description && <p className="mt-0.5 text-[12px] text-muted">{description}</p>}
@@ -66,9 +79,9 @@ export function Modal({
             <CloseIcon width={15} height={15} />
           </button>
         </header>
-        <div className="px-5 py-4">{children}</div>
+        <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
         {footer && (
-          <footer className="flex items-center justify-end gap-2 border-t border-line/70 bg-abyss/50 px-5 py-3">
+          <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-line/70 bg-abyss/50 px-5 py-3">
             {footer}
           </footer>
         )}

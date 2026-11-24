@@ -11,6 +11,7 @@ import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
 import { DmView } from "@/components/dm-view";
 import { AppearancePanel } from "@/components/settings/appearance-panel";
+import { VoiceVideoPanel } from "@/components/settings/voice-panel";
 import {
   DataPrivacyPanel,
   MessagingPermissionsPanel,
@@ -21,6 +22,15 @@ import {
   type ProfileDraft,
 } from "@/components/profile/edit-profile-modal";
 import { SettingsNav, type SettingsSectionId } from "@/components/settings/settings-nav";
+import { NewMessageModal, ChangeIconModal } from "@/components/group-dm-modals";
+import { ManageAccountsModal } from "@/components/manage-accounts";
+import { CreateServerModal, JoinServerModal, OnboardingView, ServerWizardModal } from "@/components/server-modals";
+import { ViewTitle } from "@/components/view-title";
+import { defaultGroupName } from "@/components/home-sidebar";
+import { initialsFor } from "@/lib/naming";
+import { durationToExpiry } from "@/lib/presence";
+import type { ServerIntent, ServerTemplate } from "@/lib/server-templates";
+import { SERVER_TEMPLATES } from "@/lib/server-templates";
 import { SettingsButton, SettingsCard } from "@/components/settings/primitives";
 import { AppearanceProvider } from "@/lib/appearance";
 import {
@@ -52,7 +62,18 @@ import type {
 } from "@/lib/types";
 import type { FriendEntry, FriendRequest } from "@/lib/social";
 
-type Dialog = "server" | "invite" | "channel" | "explore" | "newdm" | null;
+type Dialog =
+  | "server"
+  | "wizard"
+  | "join"
+  | "invite"
+  | "channel"
+  | "explore"
+  | "newdm"
+  | "newmessage"
+  | "accounts"
+  | "group-icon"
+  | null;
 
 /**
  * Offline demo of the workspace. Mirrors the real app's layout and
@@ -77,13 +98,44 @@ export function DemoApp({
 
   const me = demoStore.profile;
 
+  function playDemoCallSound(id: string) {
+    try {
+      const AudioCtor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtor) return;
+      const ctx = new AudioCtor();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = id.includes("un") || id === "undeafen" ? 520 : 660;
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.24);
+    } catch {
+      /* best effort */
+    }
+  }
+
   const startingHome = serverId === "@me" || !serverId;
   const [view, setView] = useState<"home" | "server">(
     startingHome && serverId === "@me" ? "home" : "server",
   );
   const [homeTab, setHomeTab] = useState<HomeTab>("friends");
   const [activeDmId, setActiveDmId] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [homeFilter, setHomeFilter] = useState("");
+  const [wizardStep, setWizardStep] = useState<1 | 2>(1);
+  const [wizardTemplate, setWizardTemplate] = useState<ServerTemplate | null>(null);
+  const [wizardIntent, setWizardIntent] = useState<ServerIntent>("friends");
+  const [wizardName, setWizardName] = useState("");
+  const [onboardingServerId, setOnboardingServerId] = useState<string | null>(null);
+  const [groupIconTarget, setGroupIconTarget] = useState<string | null>(null);
+  const [muted, setMuted] = useState(false);
+  const [deafened, setDeafened] = useState(false);
+  const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>(undefined);
 
   const [activeServerId, setActiveServerId] = useState(
     serverId && demoStore.servers.some((s) => s.id === serverId)
@@ -91,12 +143,20 @@ export function DemoApp({
       : demoStore.servers[0].id,
   );
 
-  const channels = demoStore.channelsOf(activeServerId);
+  const [channelsTick, setChannelsForDemoRefresh] = useState(0);
+  const channels = useMemo(
+    () => demoStore.channelsOf(activeServerId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeServerId, channelsTick],
+  );
   const [activeChannelId, setActiveChannelId] = useState(
     channelId && channels.some((c) => c.id === channelId)
       ? channelId
       : (channels.find((c) => c.kind === "text")?.id ?? channels[0]?.id ?? ""),
   );
+
+  const activeGroup = demoStore.groups.find((g) => g.id === activeGroupId) ?? null;
+  const groupMessages = activeGroupId ? demoStore.groupMessagesOf(activeGroupId) : [];
 
   const server = demoStore.servers.find((s) => s.id === activeServerId)!;
   const activeChannel =
@@ -316,7 +376,30 @@ export function DemoApp({
               setDialog("server");
             }}
             onExplore={() => setDialog("explore")}
+            onJoinServer={() => setDialog("join")}
             onSelect={switchServer}
+          />
+          <ViewTitle
+            view={
+              onboardingServerId === activeServerId
+                ? "onboarding"
+                : view === "home"
+                  ? activeDm || activeGroupId
+                    ? "dm"
+                    : homeTab === "friends"
+                      ? "friends"
+                      : homeTab === "store"
+                        ? "store"
+                        : "discover"
+                  : "server"
+            }
+            channelName={
+              view === "home"
+                ? activeDm?.peer?.display_name ?? activeDm?.peer?.username ?? null
+                : activeChannel?.name
+            }
+            serverName={view === "home" ? null : server?.name}
+            unread={demoDms.reduce((sum, d) => sum + d.unread, 0)}
           />
 
           {view === "home" ? (
@@ -330,8 +413,67 @@ export function DemoApp({
                   setHomeTab(tab);
                   setActiveDmId(null);
                 }}
-                onSelectDm={(id) => setActiveDmId(id)}
-                onOpenDm={() => setDialog("newdm")}
+                onSelectDm={(id) => {
+                  setActiveGroupId(null);
+                  setActiveDmId(id);
+                }}
+                groups={demoStore.groups}
+                activeGroupId={activeGroupId}
+                onSelectGroup={(id) => {
+                  setActiveDmId(null);
+                  setActiveGroupId(id);
+                  setHomeTab("friends");
+                }}
+                onOpenNewMessage={() => setDialog("newmessage")}
+                status={(me.status as Profile["status"]) ?? "online"}
+                statusExpiresAt={me.status_expires_at ?? null}
+                onSetStatus={(next, duration) => {
+                  demoStore.setStatus(
+                    next,
+                    duration === "forever" ? null : new Date(durationToExpiry(duration) ?? Date.now()).getTime() - Date.now(),
+                  );
+                  flash(`${next} set`);
+                }}
+                voice={{
+                  inputDevice: me.user_settings?.voiceInputDevice,
+                  outputDevice: me.user_settings?.voiceOutputDevice,
+                  inputVolume: me.user_settings?.voiceInputVolume,
+                  outputVolume: me.user_settings?.voiceOutputVolume,
+                }}
+                onVoiceChange={(patch) => {
+                  const current = demoStore.profile.user_settings ?? {};
+                  demoStore.updateProfile({
+                    user_settings: {
+                      ...current,
+                      ...(patch.inputDevice !== undefined ? { voiceInputDevice: patch.inputDevice } : {}),
+                      ...(patch.outputDevice !== undefined ? { voiceOutputDevice: patch.outputDevice } : {}),
+                      ...(patch.inputVolume !== undefined ? { voiceInputVolume: patch.inputVolume } : {}),
+                      ...(patch.outputVolume !== undefined ? { voiceOutputVolume: patch.outputVolume } : {}),
+                    },
+                  });
+                }}
+                onOpenVoiceSettings={() => {
+                  setSettingsSection("voice");
+                  setSettingsOpen(true);
+                }}
+                onOpenProfile={() => setEditorOpen(true)}
+                onSwitchAccounts={() => setDialog("accounts")}
+                onCopyUserId={() => {
+                  void navigator.clipboard?.writeText(me.id).catch(() => undefined);
+                  flash("User ID copied");
+                }}
+                muted={muted}
+                deafened={deafened}
+                onToggleMute={() => {
+                  setMuted((v) => !v);
+                  flash(muted ? "Unmuted" : "Muted");
+                }}
+                onToggleDeafen={() => {
+                  setDeafened((v) => !v);
+                  flash(deafened ? "Undeafened" : "Deafened");
+                }}
+                onPreviewSound={(id) => playDemoCallSound(id)}
+                onOpenDm={() => setDialog("newmessage")}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onOpenAddFriend={() => {
                   setHomeTab("friends");
@@ -355,6 +497,11 @@ export function DemoApp({
                       if (dmId) openDm(dmId);
                     }}
                     onAddFriend={async (username) => demoSocial.addFriend(username)}
+                    onExploreServers={() => {
+                      setHomeTab("discover");
+                      setActiveDmId(null);
+                      setActiveGroupId(null);
+                    }}
                     onRespond={async (id, accept) => {
                       demoSocial.respond(id, accept);
                       flash(accept ? "Friend added" : "Request removed");
@@ -383,6 +530,42 @@ export function DemoApp({
                     demoSocial.addDmMessage(activeDm.id, content);
                   }}
                   onDelete={(id) => demoSocial.deleteDmMessage(id)}
+                />
+              )}
+
+              {homeTab === "friends" && activeGroup && (
+                <DmView
+                  channel={
+                    {
+                      id: activeGroup.id,
+                      peer: null,
+                      created_at: activeGroup.created_at,
+                      last_message: activeGroup.last_message ?? null,
+                      unread_count: 0,
+                    } as unknown as DmChannel
+                  }
+                  messages={groupMessages}
+                  profile={me}
+                  onSend={(content) => demoStore.addGroupMessage(activeGroup.id, content)}
+                  onDelete={(id) =>
+                    demoStore.groupMessages = demoStore.groupMessages.filter((m) => m.id !== id)
+                  }
+                  onOpenProfile={(userId) => {
+                    if (userId === DEMO_USER_ID) setEditorOpen(true);
+                    else flash("Demo mode — profiles open for your own account.");
+                  }}
+                  group={{
+                    id: activeGroup.id,
+                    name: activeGroup.name,
+                    icon_url: activeGroup.icon_url,
+                    members: activeGroup.members,
+                    owner_id: activeGroup.owner_id,
+                  }}
+                  onInviteToGroup={() => setDialog("newmessage")}
+                  onEditGroup={() => {
+                    setGroupIconTarget(activeGroup.id);
+                    setDialog("group-icon");
+                  }}
                 />
               )}
 
@@ -424,10 +607,92 @@ export function DemoApp({
                     setDialog("channel");
                   }}
                   onCopyInvite={() => void copyInvite()}
+                  isNewServer={onboardingServerId === activeServerId}
+                  showAllChannels
+                  hideMutedChannels={false}
+                  onToggleShowAll={() => undefined}
+                  onToggleHideMuted={() => undefined}
+                  onQuickCreate={(category, kind) => {
+                    setChannelKind(kind);
+                    setFormError(null);
+                    setDialog("channel");
+                  }}
+                  onServerAction={(action) => {
+                    if (action === "invite" || action === "copy-info") {
+                      setDialog("invite");
+                      return;
+                    }
+                    if (action === "leave") {
+                      flash("Demo mode — leaving is disabled.");
+                      return;
+                    }
+                    if (action === "notifications" || action === "privacy") {
+                      setSettingsSection("notifications");
+                      setSettingsOpen(true);
+                      return;
+                    }
+                    if (action === "edit-profile") {
+                      setEditorOpen(true);
+                      return;
+                    }
+                    if (action === "create-channel" || action === "create-category") {
+                      setChannelKind("text");
+                      setDialog("channel");
+                      return;
+                    }
+                    flash(`Demo: ${action}`);
+                  }}
+                  status={(me.status as Profile["status"]) ?? "online"}
+                  statusExpiresAt={me.status_expires_at ?? null}
+                  onSetStatus={(next, duration) => {
+                    demoStore.setStatus(
+                      next,
+                      duration === "forever" ? null : new Date(durationToExpiry(duration) ?? Date.now()).getTime() - Date.now(),
+                    );
+                    flash(`${next} set`);
+                  }}
+                  voice={{
+                    inputDevice: me.user_settings?.voiceInputDevice,
+                    outputDevice: me.user_settings?.voiceOutputDevice,
+                    inputVolume: me.user_settings?.voiceInputVolume,
+                    outputVolume: me.user_settings?.voiceOutputVolume,
+                  }}
+                  onVoiceChange={() => undefined}
+                  onOpenVoiceSettings={() => {
+                    setSettingsSection("voice");
+                    setSettingsOpen(true);
+                  }}
+                  onOpenProfile={() => setEditorOpen(true)}
+                  onSwitchAccounts={() => setDialog("accounts")}
+                  onCopyUserId={() => {
+                    void navigator.clipboard?.writeText(me.id).catch(() => undefined);
+                    flash("User ID copied");
+                  }}
+                  muted={muted}
+                  deafened={deafened}
+                  onToggleMute={() => setMuted((v) => !v)}
+                  onToggleDeafen={() => setDeafened((v) => !v)}
+                  onPreviewSound={(id) => playDemoCallSound(id)}
                 />
               </div>
 
-              {activeChannel && (
+              {onboardingServerId === activeServerId && (
+                <OnboardingView
+                  serverName={server.name}
+                  initials={initialsFor(server.name)}
+                  isOwner
+                  template={wizardTemplate}
+                  onDismiss={() => setOnboardingServerId(null)}
+                  onAction={(id) => {
+                    if (id === "invite") setDialog("invite");
+                    else if (id === "message") setOnboardingServerId(null);
+                    else if (id === "icon") setDialog("server");
+                    else flash(`Demo: ${id}`);
+                  }}
+                />
+              )}
+
+              {activeChannel && onboardingServerId !== activeServerId && (
                 <DemoMessageFeed
                   key={activeChannel.id}
                   server={server}
@@ -510,114 +775,134 @@ export function DemoApp({
           />
         )}
 
-        {/* New DM */}
-        <Modal
-          open={dialog === "newdm"}
-          title="Start a conversation"
-          description="Demo mode — pick a friend."
-          onClose={() => setDialog(null)}
-        >
-          <ul className="max-h-72 space-y-1 overflow-y-auto scroll-thin">
-            {friends.map((friend) => {
-              const name = friend.profile.display_name || friend.profile.username;
-              return (
-                <li key={friend.friendshipId}>
-                  <button
-                    onClick={() => {
-                      setDialog(null);
-                      const dmId = demoSocial.ensureDm(friend.profile.id);
-                      if (dmId) openDm(dmId);
-                    }}
-                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-hover/60"
-                  >
-                    <Avatar
-                      name={name}
-                      src={friend.profile.avatar_url}
-                      accent={friend.profile.accent_color}
-                      size={34}
-                      status={(friend.profile.status as Presence) ?? "offline"}
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate text-[13.5px] font-semibold text-bright">{name}</span>
-                      <span className="block truncate text-[11.5px] text-dim">@{friend.profile.username}</span>
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-            {friends.length === 0 && (
-              <li className="py-6 text-center text-[12.5px] text-dim">Add a friend first to start a DM.</li>
-            )}
-          </ul>
-        </Modal>
+        {/* New Message — DM or group DM */}
+        <NewMessageModal
+          open={dialog === "newmessage"}
+          onClose={() => {
+            setDialog(null);
+            setActiveGroupId(null);
+          }}
+          profile={me}
+          friends={friends.map((f) => f.profile)}
+          serverMembers={memberRows.map((m) => m.profile).filter(Boolean) as Profile[]}
+          onStartDm={(userId) => {
+            const dmId = demoSocial.ensureDm(userId);
+            setDialog(null);
+            if (dmId) {
+              setActiveGroupId(null);
+              setActiveDmId(dmId);
+              setHomeTab("friends");
+            }
+          }}
+          onCreateGroup={(memberIds, name) => {
+            const activeExisting = activeGroupId;
+            if (activeExisting) {
+              demoStore.addGroupMembers(activeExisting, memberIds);
+              setGroupIconTarget(activeExisting);
+              setDialog(null);
+              flash("Members added to group");
+              return;
+            }
+            const result = demoStore.createGroup(memberIds, name);
+            if (!result.ok) {
+              flash(result.message);
+              return;
+            }
+            setDialog(null);
+            setActiveDmId(null);
+            setActiveGroupId(result.group.id);
+            setHomeTab("friends");
+            flash(`Created ${result.group.name ?? "group"}`);
+          }}
+        />
 
-        {/* Create server */}
-        <Modal
-          open={dialog === "server"}
-          title="Create a server"
-          description="Demo mode — the server lives in memory until you reload."
+        {/* Change group icon */}
+        <ChangeIconModal
+          open={dialog === "group-icon"}
           onClose={() => setDialog(null)}
-          footer={
-            <>
-              <button
-                onClick={() => setDialog(null)}
-                className="rounded-lg px-3 py-1.5 text-[12.5px] text-muted transition hover:text-bright"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  if (!serverName.trim()) return;
-                  const created = demoStore.addServer(serverName.trim(), serverIcon);
-                  setServerName("");
-                  setDialog(null);
-                  switchServer(created.id);
-                  flash(`Created ${created.name}`);
-                }}
-                disabled={!serverName.trim()}
-                className="rounded-lg bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
-              >
-                Create server
-              </button>
-            </>
+          currentIcon={
+            demoStore.groups.find((g) => g.id === groupIconTarget)?.icon_url ?? null
           }
-        >
-          <div className="space-y-4">
-            <div>
-              <p className="mb-2 text-[11px] font-semibold tracking-widest text-muted uppercase">
-                Pick an icon
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {["🚀", "🎨", "🎮", "🎧", "⚡", "🛠️", "📚", "🌊", "🔥", "🧠"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => setServerIcon(emoji)}
-                    aria-pressed={serverIcon === emoji}
-                    className={`grid h-10 w-10 place-items-center rounded-xl text-lg transition ${
-                      serverIcon === emoji
-                        ? "bg-blurple/25 ring-2 ring-blurple"
-                        : "bg-raised hover:bg-hover"
-                    }`}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label className="block">
-              <span className="mb-1.5 block text-[11px] font-semibold tracking-widest text-muted uppercase">
-                Server name
-              </span>
-              <input
-                value={serverName}
-                onChange={(e) => setServerName(e.target.value)}
-                maxLength={60}
-                placeholder="Design Guild"
-                className="w-full rounded-lg border border-line bg-ink px-3 py-2 text-sm outline-none focus:border-blurple/60"
-              />
-            </label>
-          </div>
-        </Modal>
+          onSave={(iconUrl) => {
+            const target = groupIconTarget;
+            if (target) demoStore.updateGroup(target, { icon_url: iconUrl });
+            setDialog(null);
+            flash("Group icon updated");
+          }}
+        />
+
+        {/* Manage Accounts */}
+        <ManageAccountsModal
+          open={dialog === "accounts"}
+          onClose={() => setDialog(null)}
+          accounts={demoStore.accounts}
+          onSwitch={(id) => {
+            setDialog(null);
+            flash(id === me.id ? "Already signed in" : "Demo mode — account switching is disabled.");
+          }}
+          onAddAccount={() => {
+            setDialog(null);
+            flash("Demo mode — add an account from /login.");
+          }}
+        />
+
+        {/* Create Your Server */}
+        <CreateServerModal
+          open={dialog === "server"}
+          onClose={() => setDialog(null)}
+          onStart={(template) => {
+            setWizardTemplate(template);
+            setWizardName(`${me.display_name}'s server`);
+            setWizardStep(1);
+            setDialog("wizard");
+          }}
+          onJoinInstead={() => setDialog("join")}
+        />
+
+        {/* Two-step wizard */}
+        <ServerWizardModal
+          open={dialog === "wizard"}
+          step={wizardStep}
+          onClose={() => setDialog(null)}
+          onBack={() => (wizardStep === 2 ? setWizardStep(1) : setDialog("server"))}
+          onNext={(intent) => {
+            setWizardIntent(intent);
+            setWizardStep(2);
+          }}
+          onSkip={() => setWizardStep(2)}
+          onFinish={(name) => {
+            const server = demoStore.addServer(name, wizardTemplate?.emoji ?? "🚀");
+            setDialog(null);
+            setActiveServerId(server.id);
+            setView("server");
+            setChannelsForDemoRefresh((n) => n + 1);
+            setOnboardingServerId(server.id);
+            flash(`Created ${name}`);
+          }}
+          defaultName={wizardName}
+          template={wizardTemplate}
+        />
+
+        {/* Join a Server */}
+        <JoinServerModal
+          open={dialog === "join"}
+          onClose={() => setDialog(null)}
+          onJoin={(code) => {
+            const result = demoStore.redeemInvite(code);
+            if (!result.ok) {
+              setFormError(result.message);
+              return;
+            }
+            setDialog(null);
+            setFormError(null);
+            setActiveServerId(result.server.id);
+            setView("server");
+            setChannelsForDemoRefresh((n) => n + 1);
+            flash(`Joined ${result.server.name}`);
+          }}
+          error={formError}
+          onDiscover={() => setDialog("explore")}
+        />
 
         {/* Create channel */}
         <Modal
@@ -840,7 +1125,7 @@ function SimpleView({
   body: string;
 }) {
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-panel/25">
+    <section className="ambient-stage flex min-w-0 flex-1 flex-col">
       <header className="flex h-12 shrink-0 items-center border-b border-line/60 px-4">
         <h2 className="text-[15px] font-bold tracking-tight text-bright">{title}</h2>
       </header>
@@ -875,7 +1160,36 @@ function DemoSettings({
   const [accentColor, setAccentColor] = useState(demoStore.profile.accent_color);
   const [bannerColor, setBannerColor] = useState(demoStore.profile.banner_color ?? null);
 
+  function playDemoSound(id: string) {
+    try {
+      const AudioCtor =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtor) return;
+      const ctx = new AudioCtor();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = id.includes("un") ? 520 : 660;
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.24);
+    } catch {
+      /* audio is best-effort */
+    }
+  }
+
+  function patchDemoSettings(patch: Partial<typeof settings>) {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    demoStore.updateProfile({ user_settings: next });
+  }
+
   const appearanceProps = {
+    settings,
+    onChange: patchDemoSettings,
     accentColor,
     onAccentChange: (color: string) => {
       setAccentColor(color);
@@ -943,6 +1257,14 @@ function DemoSettings({
           <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-8 py-6">
             <div className="mx-auto max-w-3xl">
               {section === "appearance" && <AppearancePanel {...appearanceProps} />}
+
+              {section === "voice" && (
+                <VoiceVideoPanel
+                  settings={settings}
+                  onChange={patchDemoSettings}
+                  onPreviewSound={(id) => playDemoSound(id)}
+                />
+              )}
 
               {section === "data" && (
                 <DataPrivacyPanel

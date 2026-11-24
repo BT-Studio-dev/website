@@ -6,6 +6,7 @@ import {
   CheckCircleIcon,
   CheckIcon,
   CloseIcon,
+  CompassIcon,
   FriendsIcon,
   MessageBubbleIcon,
   MoreIcon,
@@ -33,6 +34,7 @@ export function FriendsView({
   onAddFriend,
   onRespond,
   onRemove,
+  onExploreServers = () => undefined,
   initialFilter = "online",
 }: {
   friends: FriendEntry[];
@@ -40,9 +42,10 @@ export function FriendsView({
   outgoing: FriendRequest[];
   activities: Record<string, ActiveActivity>;
   onOpenDm: (userId: string) => void;
-  onAddFriend: (username: string) => Promise<{ ok: boolean; message: string }>;
+  onAddFriend: (username: string, note?: string) => Promise<{ ok: boolean; message: string }>;
   onRespond: (id: string, accept: boolean) => Promise<void>;
   onRemove: (userId: string) => Promise<void>;
+  onExploreServers?: () => void;
   initialFilter?: FriendFilter;
 }) {
   const [filter, setFilter] = useState<FriendFilter>(initialFilter);
@@ -51,6 +54,7 @@ export function FriendsView({
   const [addResult, setAddResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [adding, setAdding] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [addNote, setAddNote] = useState("");
 
   const online = useMemo(
     () => friends.filter((f) => (f.profile.status ?? "offline") !== "offline"),
@@ -85,27 +89,62 @@ export function FriendsView({
     const result = await onAddFriend(addValue);
     setAddResult(result);
     setAdding(false);
-    if (result.ok) setAddValue("");
+    if (result.ok) {
+      setAddValue("");
+      setAddNote("");
+    }
   }
 
   const pendingTotal = incoming.length + outgoing.length;
 
   return (
-    <section className="flex min-w-0 flex-1 flex-col bg-panel/25">
-      {/* Header */}
-      <header className="flex h-12 shrink-0 items-center gap-2 border-b border-line/60 px-4">
-        <FriendsIcon width={20} height={20} className="shrink-0 text-muted" />
-        <h2 className="shrink-0 text-[15px] font-bold tracking-tight text-bright">Friends</h2>
-        <span className="mx-1 hidden h-4 w-px shrink-0 bg-line sm:block" />
+    <section className="ambient-stage flex min-w-0 flex-1 flex-col">
+      {/*
+        Header is a two-row grid below `md` so the tablist can never push the
+        search box out of view or create a horizontal scrollbar.
+      */}
+      <header className="glass-bar grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 border-b px-3 py-1.5 md:flex md:h-12 md:gap-2 md:px-4 md:py-0">
+        <div className="flex min-w-0 items-center gap-2">
+          <FriendsIcon width={20} height={20} className="hidden shrink-0 text-muted md:block" />
+          <h2 className="shrink-0 text-[15px] font-bold tracking-tight text-bright">Friends</h2>
+          <span className="mx-0.5 hidden h-4 w-px shrink-0 bg-line md:block" />
+        </div>
 
-        <nav role="tablist" aria-label="Friend filters" className="flex min-w-0 items-center gap-1 overflow-x-auto">
+        <div className="hidden min-w-[120px] max-w-[220px] items-center gap-1.5 rounded-md bg-void/60 px-2.5 py-1.5 ring-1 ring-line/70 focus-within:ring-blurple/50 md:order-last md:ml-auto md:flex">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search"
+            aria-label="Search friends"
+            className="w-full min-w-0 bg-transparent text-[12.5px] outline-none placeholder:text-dim"
+          />
+          <SearchIcon width={13} height={13} className="shrink-0 text-dim" />
+        </div>
+        <div className="col-span-2 flex items-center gap-1.5 md:hidden">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md bg-void/60 px-2.5 py-1 ring-1 ring-line/70 focus-within:ring-blurple/50">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search"
+              aria-label="Search friends"
+              className="w-full min-w-0 bg-transparent text-[12.5px] outline-none placeholder:text-dim"
+            />
+            <SearchIcon width={13} height={13} className="shrink-0 text-dim" />
+          </div>
+        </div>
+
+        <nav
+          role="tablist"
+          aria-label="Friend filters"
+          className="scroll-thin col-span-2 flex min-w-0 items-center gap-0.5 overflow-x-auto md:col-span-1 md:overflow-visible"
+        >
           {FILTERS.map((item) => (
             <button
               key={item.id}
               role="tab"
               aria-selected={filter === item.id}
               onClick={() => setFilter(item.id)}
-              className={`shrink-0 rounded-md px-2.5 py-1 text-[13.5px] font-medium transition ${
+              className={`shrink-0 rounded-md px-2 py-1 text-[13px] font-medium whitespace-nowrap transition sm:px-2.5 sm:text-[13.5px] ${
                 filter === item.id
                   ? "bg-hover text-bright"
                   : "text-muted hover:bg-hover/50 hover:text-bright"
@@ -123,7 +162,7 @@ export function FriendsView({
             onClick={() => setFilter("add")}
             aria-selected={filter === "add"}
             role="tab"
-            className={`ml-1 shrink-0 rounded-md px-2.5 py-1 text-[13.5px] font-semibold transition ${
+            className={`ml-0.5 shrink-0 rounded-md px-2 py-1 text-[13px] font-semibold whitespace-nowrap transition sm:px-2.5 sm:text-[13.5px] ${
               filter === "add"
                 ? "bg-mint text-white"
                 : "bg-mint/15 text-mint hover:bg-mint/25"
@@ -132,17 +171,6 @@ export function FriendsView({
             Add Friend
           </button>
         </nav>
-
-        <div className="ml-auto hidden min-w-[130px] items-center gap-1.5 rounded-md bg-void/60 px-2.5 py-1.5 ring-1 ring-line/70 focus-within:ring-blurple/50 lg:flex">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search"
-            aria-label="Search friends"
-            className="w-full bg-transparent text-[12.5px] outline-none placeholder:text-dim"
-          />
-          <SearchIcon width={13} height={13} className="shrink-0 text-dim" />
-        </div>
       </header>
 
       <div className="scroll-thin min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -172,6 +200,29 @@ export function FriendsView({
                   {adding ? "Sending…" : "Send Friend Request"}
                 </button>
               </div>
+              <div className="mt-3">
+                <label
+                  htmlFor="add-friend-note"
+                  className="mb-1 block text-[11.5px] font-semibold text-muted"
+                >
+                  Personalize your request{" "}
+                  <span className="font-normal text-dim">(Optional)</span>
+                </label>
+                <div className="rounded-lg bg-void/70 ring-1 ring-line focus-within:ring-blurple/60">
+                  <textarea
+                    id="add-friend-note"
+                    value={addNote}
+                    onChange={(e) => setAddNote(e.target.value.slice(0, 120))}
+                    rows={2}
+                    maxLength={120}
+                    placeholder="Say hi! Let them know who you are."
+                    className="scroll-thin w-full resize-none bg-transparent px-3 pt-2 text-[13px] leading-relaxed outline-none placeholder:text-dim"
+                  />
+                  <p className="px-3 pb-1.5 text-right text-[10.5px] tabular-nums text-dim">
+                    {addNote.length}/120
+                  </p>
+                </div>
+              </div>
             </form>
             {addResult && (
               <p
@@ -185,6 +236,30 @@ export function FriendsView({
                 {addResult.message}
               </p>
             )}
+
+            <section className="mt-8">
+              <h4 className="text-[11px] font-bold tracking-[0.14em] text-dim uppercase">
+                Other Places to Make Friends
+              </h4>
+              <button
+                type="button"
+                onClick={onExploreServers}
+                className="mt-2 flex w-full items-center gap-3 rounded-xl border border-line/70 bg-ink/50 p-3 text-left transition hover:border-blurple/50 hover:bg-hover/40"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blurple/70 to-blurple-soft/60 text-white">
+                  <CompassIcon width={20} height={20} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13.5px] font-semibold text-bright">
+                    Explore Discoverable Servers
+                  </span>
+                  <span className="block text-[12px] text-muted">
+                    Find a community based on your hobbies or interests.
+                  </span>
+                </span>
+                <span className="shrink-0 text-[11px] font-semibold text-mint">Browse →</span>
+              </button>
+            </section>
           </div>
         ) : filter === "pending" ? (
           <div className="space-y-6">

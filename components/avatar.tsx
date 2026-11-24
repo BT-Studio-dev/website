@@ -3,16 +3,25 @@
 import type { Presence } from "@/lib/types";
 
 const presenceColor: Record<Presence, string> = {
-  online: "#3ba55d",
-  idle: "#faa61a",
-  dnd: "#ed4245",
-  offline: "#6b7280",
+  online: "#23a55a",
+  idle: "#f0b232",
+  dnd: "#f23f43",
+  invisible: "#80848e",
+  offline: "#80848e",
 };
 
 export function presenceLabel(status: Presence) {
-  return status === "dnd"
-    ? "Do Not Disturb"
-    : status.charAt(0).toUpperCase() + status.slice(1);
+  if (status === "dnd") return "Do Not Disturb";
+  if (status === "invisible") return "Invisible";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+/**
+ * Invisible users render as offline to everyone else, so the dot colour is
+ * derived from what other people should see rather than the raw value.
+ */
+export function visiblePresence(status: Presence): Presence {
+  return status === "invisible" ? "offline" : status;
 }
 
 export function PresenceDot({

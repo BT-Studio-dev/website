@@ -336,3 +336,119 @@ export const UserIcon = (p: IconProps) => (
     <path d="M4.8 20.2v-1.2a4.6 4.6 0 0 1 4.6-4.6h5.2a4.6 4.6 0 0 1 4.6 4.6v1.2" />
   </svg>
 );
+
+/* ----------------------- Phase 4 additions ----------------------- */
+
+export const ChevronDownIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+export const DownloadIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5M4 20h16" />
+  </svg>
+);
+
+export const CrownIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M3 7l4 4 5-7 5 7 4-4-2 12H5L3 7Z" />
+  </svg>
+);
+
+export const GifIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="3" />
+    <path d="M10 10H8.5A1.5 1.5 0 0 0 7 11.5v1A1.5 1.5 0 0 0 8.5 14H10v-1.4H8.8" />
+    <path d="M13 10v4m0-4h2m-2 2h1.6M18 10v4m0-4h1.6" />
+  </svg>
+);
+
+export const StickerIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M21 12a9 9 0 1 0-9 9c4 0 7-2.4 9-9Z" />
+    <path d="M12 21c0-4 2-9 9-9" />
+    <circle cx="9" cy="10" r="0.9" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="10" r="0.9" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const EmojiIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8.5 14.5a4.2 4.2 0 0 0 7 0" />
+    <circle cx="9" cy="9.5" r="1" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="9.5" r="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const AtIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M16 8v5a2.5 2.5 0 0 0 5 0v-1a9 9 0 1 0-4 7.5" />
+  </svg>
+);
+
+export const SlashIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="3" width="18" height="18" rx="4" />
+    <path d="m14.5 7.5-5 9" />
+  </svg>
+);
+
+export const VolumeIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M11 5 6.5 9H3v6h3.5L11 19V5Z" />
+    <path d="M15.5 9a4 4 0 0 1 0 6" />
+    <path d="M18 6.5a7.5 7.5 0 0 1 0 11" />
+  </svg>
+);
+
+export const CameraIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <rect x="3" y="6" width="12" height="12" rx="2.5" />
+    <path d="m15 11 6-3v8l-6-3" />
+  </svg>
+);
+
+export const UploadIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M12 20V8m0 0 4.5 4.5M12 8 7.5 12.5M4 4h16" />
+  </svg>
+);
+
+export const RadiusIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <path d="M4 20V9a5 5 0 0 1 5-5h11" />
+    <circle cx="4" cy="20" r="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const GiftBoxIcon = GiftIcon;
+
+export const StatusOnlineIcon = (p: IconProps) => (
+  <svg {...base} {...p}>
+    <circle cx="12" cy="12" r="8" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const StatusIdleIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" {...p}>
+    <circle cx="12" cy="12" r="8" fill="currentColor" />
+    <circle cx="8.5" cy="8.5" r="6.2" fill="var(--status-cut, #111214)" />
+  </svg>
+);
+
+export const StatusDndIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" {...p}>
+    <circle cx="12" cy="12" r="8" fill="currentColor" />
+    <rect x="7.5" y="10.8" width="9" height="2.4" rx="1.2" fill="var(--status-cut, #111214)" />
+  </svg>
+);
+
+export const StatusOfflineIcon = (p: IconProps) => (
+  <svg viewBox="0 0 24 24" fill="none" {...p}>
+    <circle cx="12" cy="12" r="7.2" stroke="currentColor" strokeWidth="2.4" fill="none" />
+  </svg>
+);
