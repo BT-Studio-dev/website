@@ -23,7 +23,6 @@ import {
 } from "@/components/profile/edit-profile-modal";
 import { ProfileCard } from "@/components/profile/profile-card";
 import { ViewTitle } from "@/components/view-title";
-import { SendMessageButton } from "@/components/status-picker";
 import {
   CreateServerModal,
   JoinServerModal,
@@ -42,7 +41,7 @@ import {
   sendGroupMessage,
   updateGroupDm,
 } from "@/lib/groups";
-import { durationToExpiry, effectiveStatus, publicStatus } from "@/lib/presence";
+import { durationToExpiry, effectiveStatus } from "@/lib/presence";
 import { playSound } from "@/lib/sounds";
 import type { Dialog as NewDialog } from "@/components/comms-types";
 import { CheckIcon, CopyIcon, HashIcon, SpeakerIcon } from "@/components/icons";
@@ -1018,6 +1017,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
     [onlineFriends, activities],
   );
 
+  const liveStatus = effectiveStatus(status, statusExpiresAt);
   const titleUnread = dmChannels.reduce((sum, d) => sum + (d.unread_count ?? 0), 0) +
     groups.reduce((sum, g) => sum + (g.unread_count ?? 0), 0);
   const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
@@ -1083,7 +1083,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               setNewDmSearch("");
               setDialog("newmessage");
             }}
-            status={status}
+            status={liveStatus}
             statusExpiresAt={statusExpiresAt}
             onSetStatus={(next, duration) => void setPresence(next, duration)}
             voice={voiceSettings}
@@ -1282,7 +1282,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                     break;
                 }
               }}
-              status={status}
+              status={liveStatus}
               statusExpiresAt={statusExpiresAt}
               onSetStatus={(next, duration) => void setPresence(next, duration)}
               voice={voiceSettings}
