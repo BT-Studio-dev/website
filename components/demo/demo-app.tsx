@@ -120,16 +120,25 @@ export function DemoApp({
           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber" />
           <p className="min-w-0 flex-1 truncate">
             <span className="font-semibold">Demo mode</span> —{" "}
-            {reason === "offline"
-              ? "Supabase isn't reachable from this browser, so you're exploring an in-memory snapshot."
-              : "No Supabase project configured yet."}{" "}
+            {reason === "requested"
+              ? "you're exploring an in-memory snapshot of the workspace."
+              : reason === "offline"
+                ? "Supabase isn't reachable from this browser, so you're exploring an in-memory snapshot."
+                : "No Supabase project configured yet."}{" "}
             Messages are not persisted.
           </p>
+          <a
+            href="/signup"
+            className="shrink-0 rounded bg-amber/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase hover:bg-amber/30"
+          >
+            Sign up
+          </a>
           <button
             onClick={() => setBannerVisible(false)}
+            aria-label="Dismiss demo notice"
             className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase hover:bg-amber/15"
           >
-            dismiss
+            ✕
           </button>
         </div>
       )}

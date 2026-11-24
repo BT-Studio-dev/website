@@ -46,6 +46,13 @@ export function CommsLoader({
 
   const load = useCallback(
     async (opts: { silent?: boolean } = {}) => {
+      // 0. Explicit demo link (`?demo=1`) always wins — handy for reviews.
+      if (new URLSearchParams(window.location.search).has("demo")) {
+        setDemoReason("requested");
+        setDemo(true);
+        return;
+      }
+
       // 1. Can this browser talk to Supabase at all?
       const reachable = await isSupabaseReachable(
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
