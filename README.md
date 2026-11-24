@@ -69,11 +69,33 @@ becomes your avatar tint everywhere.
 | **Channel sidebar** | Glass surface, collapsible groups with per-category `+` quick-create, occupant avatars under voice channels, admin-only create buttons, and a **Get Started** onboarding banner in new servers |
 | **Server header dropdown** | Server Boost, Invite to Server / App Directory, **Show All Channels** + **Hide Muted Channels** checkboxes, Notification & Privacy settings, Edit Per-server Profile, Leave Server (soft red), Copy Server Info → submenu. Owners/admins additionally get Server Settings, Insights, Create Channel / Category / Event, Security Actions, Report Raid |
 | **Message feed** | Day dividers, consecutive-message grouping (7 min window), inline markdown (`**bold**`, `*italic*`, `` `code` ``, `~~strike~~`, auto-links), optimistic sends, hover-delete, per-channel search, a `LIVE`/`SYNC` realtime badge |
-| **Composer** | Same floating pill as DMs (attachments, mentions, slash commands, emoji/GIF/sticker), `Enter` sends, `Shift+Enter` newline, typing broadcast |
+| **Composer** | Same floating pill as DMs (attachments, mentions, slash commands, emoji/GIF/sticker), `Enter` or `→` at end-of-line sends, `Shift+Enter` newline, typing broadcast |
 | **Member list** | Online/Offline grouping, owner → admin → member ordering, presence dots, accent-tinted avatars, copy-username, “in voice” badges |
 | **User panel** | Glass bar; avatar opens the **profile quick-action popover** (mini card, status row with a nested **timed status** flyout — 15 min → Forever —, **10,130 Orbs**, Switch Accounts, Copy User ID), and the mic / headphone chevrons open **device pickers** with input & output volume sliders and a Voice Settings link. Also hosts the Manage Accounts modal |
 | **Voice** | Join/leave voice channels, persisted occupant list, muted state, “Voice connected” card |
 | **Presence** | Status picker (online / idle / do not disturb / offline); auto-idles on tab blur, offline on unload |
+
+### Attachments (channels, DMs and group DMs)
+
+Uploads run through one pipeline in `lib/attachments.ts` and one bucket,
+`chat-attachments` (public, 25 MB per file, 10 files per message).
+
+| Path | What happens |
+| --- | --- |
+| `+` → **Upload a File** | Opens a multi-select picker (`image/*,video/*,.pdf,.zip,.txt,.md,.json`) |
+| `+` → **Create Thread** / **Use Apps** | Threads and the app directory are staged — both say so inline rather than failing silently |
+| Drag onto the feed | Full-pane overlay reads **Upload to #general / @ada**; the drop is routed into the open composer |
+| `Ctrl+V` | Pasted images become pending attachments |
+| Pending tray | Removable thumbnail cards with `×`, per-file upload shimmers, and inline error text for oversize or unsupported files |
+| Sent message | `AttachmentGrid` renders rounded image tiles (shimmer while loading), hover filename + size, video previews, and file chips |
+| Click a tile | Portal lightbox with `Esc` to close, `←`/`→` to step through, download button and dot pagination |
+
+Paths are `<userId>/<8-hex>-<slug>`; the storage policy
+`(storage.foldername(name))[1] = auth.uid()` is what makes an upload legal, so
+every writer must keep that first segment. `attachments` is a jsonb array of
+`{ url, name, type, size }` on `messages`, `direct_messages` and
+`group_messages`, guarded by `sanitize_attachments` / `enforce_attachment_shape`
+triggers; blank text is allowed when attachments exist.
 
 ### Server creation & discovery
 
@@ -172,6 +194,21 @@ handles the OAuth/email-confirmation callback.
 | `dm:<dmChannelId>` | `postgres_changes` | `direct_messages` INSERT for the open conversation |
 | `social` | `postgres_changes` | `blocked_users` (alongside friendships and dm_channels) |
 
+### Storage buckets
+
+| Bucket | Public | Limit | Written by |
+| --- | --- | --- | --- |
+| `avatars` | yes | 8 MB | `uploadAvatar` → `profiles.avatar_url` |
+| `banners` | yes | 8 MB | `uploadBanner` → `profiles.banner_url` |
+| `server-icons` | yes | 4 MB | server icon picker |
+| `chat-attachments` | yes | 25 MB | `uploadAttachments` → `attachments` jsonb |
+
+Every write is owner-scoped by the first path segment
+(`(storage.foldername(name))[1] = auth.uid()`), so uploads are
+`<your-uid>/…`; reads are open because the surfaces are public CDN URLs.
+Uploads surface the real Postgres/Storage message (bucket missing, RLS
+rejection, size limit) instead of a generic "upload failed".
+
 ### Database schema
 
 ```
@@ -269,7 +306,9 @@ Both are safe to expose to the browser; RLS is what protects the data.
 
 Apply the migrations in `supabase/migrations/` in order to a fresh project (or
 paste them into the Supabase SQL editor). They create the schema, RLS policies,
-realtime publication, the friends/DM tables, and seed the official server.
+realtime publication, the friends/DM tables, the four storage buckets with
+owner-scoped policies (`0008`), atomic server provisioning via the
+`on_server_created` trigger (`0009`), and seed the official server.
 
 Then in Supabase → Authentication → URL Configuration:
 
