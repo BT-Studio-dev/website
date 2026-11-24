@@ -596,11 +596,24 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       return;
     }
 
-    await supabase.from("server_members").insert({ server_id: created.id, user_id: profile.id, role: "owner" });
-    await supabase.from("channels").insert([
-      { server_id: created.id, name: "general", kind: "text", position: 0, topic: `Say hi in ${name}.` },
-      { server_id: created.id, name: "voice", kind: "voice", position: 1 },
-    ]);
+    // `on_server_created` (migration 0009) already inserted the owner membership
+    // and the default `#general` + General Voice channels; these upserts are the
+    // idempotent fallback for a database without the trigger.
+    await supabase
+      .from("server_members")
+      .upsert(
+        { server_id: created.id, user_id: profile.id, role: "owner" },
+        { onConflict: "server_id,user_id", ignoreDuplicates: true },
+      );
+    await supabase
+      .from("channels")
+      .upsert(
+        [
+          { server_id: created.id, name: "general", kind: "text", position: 0, topic: `Say hi in ${name}.` },
+          { server_id: created.id, name: "General", kind: "voice", position: 1 },
+        ],
+        { onConflict: "server_id,name,kind", ignoreDuplicates: true },
+      );
 
     setServers((prev) => [...prev, created]);
     setBusy(false);
@@ -996,19 +1009,35 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
       .from("server_members")
       .insert({ server_id: created.id, user_id: profile.id, role: "owner" });
 
-    const seed = template?.channels ?? [
-      { name: "general", kind: "text" as const, topic: `Welcome to ${name}.` },
-      { name: "General", kind: "voice" as const },
-    ];
-    await supabase.from("channels").insert(
-      seed.map((channel, index) => ({
-        server_id: created.id,
-        name: channel.name.toLowerCase().replace(/\s+/g, "-"),
-        kind: channel.kind,
-        topic: channel.topic ?? null,
-        position: index,
-      })),
-    );
+    // The `on_server_created` trigger (migration 0009) already provisioned
+    // `#general` + General Voice, so only add the template's extra channels and
+    // never fight the `unique (server_id, name, kind)` constraint.
+    const seed = template?.channels ?? [];
+    if (seed.length > 0) {
+      const { data: existing } = await supabase
+        .from("channels")
+        .select("name, kind")
+        .eq("server_id", created.id);
+      const taken = new Set(
+        ((existing ?? []) as { name: string; kind: string }[]).map(
+          (c) => `${c.kind}:${c.name.toLowerCase()}`,
+        ),
+      );
+      const rows = seed
+        .map((channel, index) => ({
+          server_id: created.id,
+          name: channel.name.toLowerCase().replace(/\s+/g, "-"),
+          kind: channel.kind,
+          topic: channel.topic ?? null,
+          position: index + 2,
+        }))
+        .filter((row) => !taken.has(`${row.kind}:${row.name}`));
+      if (rows.length > 0) {
+        await supabase
+          .from("channels")
+          .upsert(rows, { onConflict: "server_id,name,kind", ignoreDuplicates: true });
+      }
+    }
 
     // Mint the first shareable invite so "Invite to Server" always works.
     await supabase.rpc("create_server_invite", { p_server: created.id });
