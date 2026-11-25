@@ -5,6 +5,7 @@ import { Avatar } from "@/components/avatar";
 import { MessageContent } from "@/components/message-content";
 import { HashIcon, TrashIcon, UsersIcon, SearchIcon } from "@/components/icons";
 import { ChatComposer } from "@/components/chat-composer";
+import { GlobalSearchButton } from "@/components/global-search-button";
 import { formatDayLabel, formatTimestamp, formatTime, sameDay, shouldGroup } from "@/lib/format";
 import type { Channel, Message, Profile, Server, ServerMember } from "@/lib/types";
 
@@ -20,6 +21,7 @@ export function DemoMessageFeed({
   memberCount,
   canManage,
   onToggleMembers,
+  onOpenSearch,
   onSend,
   onDelete,
 }: {
@@ -31,6 +33,8 @@ export function DemoMessageFeed({
   memberCount: number;
   canManage: boolean;
   onToggleMembers: () => void;
+  /** Opens the global Quick Switcher. */
+  onOpenSearch?: () => void;
   onSend: (content: string) => void;
   onDelete: (id: string) => void;
 }) {
@@ -91,6 +95,13 @@ export function DemoMessageFeed({
             <span className="h-1.5 w-1.5 rounded-full bg-amber" />
             DEMO
           </span>
+          {onOpenSearch && (
+            <GlobalSearchButton
+              label={channel.name}
+              onOpen={onOpenSearch}
+              className="hidden lg:flex"
+            />
+          )}
           <button
             onClick={() => setSearch((v) => (v === null ? "" : null))}
             aria-label="Search this channel"

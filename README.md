@@ -70,7 +70,7 @@ becomes your avatar tint everywhere.
 | **Server header dropdown** | Server Boost, Invite to Server / App Directory, **Show All Channels** + **Hide Muted Channels** checkboxes, Notification & Privacy settings, Edit Per-server Profile, Leave Server (soft red), Copy Server Info → submenu. Owners/admins additionally get Server Settings, Insights, Create Channel / Category / Event, Security Actions, Report Raid |
 | **Message feed** | Day dividers, consecutive-message grouping (7 min window), inline markdown (`**bold**`, `*italic*`, `` `code` ``, `~~strike~~`, auto-links), optimistic sends, hover-delete, per-channel search, a `LIVE`/`SYNC` realtime badge |
 | **Composer** | Same floating pill as DMs (attachments, mentions, slash commands, emoji/GIF/sticker), `Enter` or `→` at end-of-line sends, `Shift+Enter` newline, typing broadcast |
-| **Member list** | Online/Offline grouping, owner → admin → member ordering, presence dots, accent-tinted avatars, copy-username, “in voice” badges |
+| **Member list** | Online/Offline grouping, owner → admin → member ordering, presence dots, accent-tinted avatars, copy-username, “in voice” badges, and a `…` action menu per member |
 | **User panel** | Glass bar; avatar opens the **profile quick-action popover** (mini card, status row with a nested **timed status** flyout — 15 min → Forever —, **10,130 Orbs**, Switch Accounts, Copy User ID), and the mic / headphone chevrons open **device pickers** with input & output volume sliders and a Voice Settings link. Also hosts the Manage Accounts modal |
 | **Voice** | Join/leave voice channels, persisted occupant list, muted state, “Voice connected” card, and a full **voice room** view — participant grid (toggle Grid View), live camera, **screen share / Go Live** with a `LIVE · 720P 30FPS` overlay, a synthesized **soundboard** (Creeper, hrrh, pake, npc background, hmm, mlom, door … with a **Get Nitro** bar for premium sounds), and a `…` menu for *Grid View*, *Show Non-Video Participants*, *Show New Message Previews* and *Voice & Video Settings* |
 | **Presence** | Status picker (online / idle / do not disturb / offline); auto-idles on tab blur, offline on unload |
@@ -140,6 +140,26 @@ choice paints before the network responds, and
 device inherits it. `applyAppearance()` turns each preference into a CSS
 variable or `data-*` attribute on `<html>`, which is why ticking "Enable High
 Contrast Mode" repaints instantly.
+
+### Search and user menus
+
+**Quick Switcher** (`Ctrl+K`, or the “Search …” box in a channel or DM header)
+opens one overlay over the live index of channels, voice channels, servers, DMs
+and server members. ↑/↓ move, Enter opens, Esc clears the query then closes (the
+`X` inside the field clears it immediately). Recent searches are stored per
+browser under `btcomms.recentSearches.v1` and shown before you type. Ranking
+lives in `lib/search.ts` — exact beats prefix beats word-start beats substring.
+
+The **`…` user menu** hangs off a profile card, a DM header, the DM profile
+panel and any member-list row: Share Profile, Copy User Info (a nested flyout
+with Copy User ID, Copy Profile Link and Copy Avatar Image Link), Shop This
+Look, Invite to Server (nested, one row per server), Ignore, Block (red) and
+Report User Profile. The copy rows confirm inline with a check; if the clipboard
+is blocked they surface the value instead of claiming success.
+
+The phone button in a DM header is honest about the architecture: direct calls
+aren't hosted peer-to-peer here, so it flashes *“Direct calls need a server voice
+channel — open a server to call [username].”* rather than pretending to ring.
 
 ### Voice media plane
 

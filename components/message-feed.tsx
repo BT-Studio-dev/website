@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Avatar } from "@/components/avatar";
 import { MessageContent } from "@/components/message-content";
+import { GlobalSearchButton } from "@/components/global-search-button";
 import { HashIcon, TrashIcon, UsersIcon, SearchIcon } from "@/components/icons";
 import { ChatComposer, type ComposerApi } from "@/components/chat-composer";
 import { AttachmentGrid } from "@/components/attachments";
@@ -32,6 +33,7 @@ export function MessageFeed({
   canManage,
   onToggleMembers,
   onOpenMemberList,
+  onOpenSearch,
 }: {
   supabase: SupabaseClient;
   server: Server;
@@ -42,6 +44,8 @@ export function MessageFeed({
   members: ServerMember[];
   canManage: boolean;
   onToggleMembers: () => void;
+  /** Opens the global Quick Switcher from the header. */
+  onOpenSearch?: () => void;
   onOpenMemberList: () => void;
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -360,6 +364,13 @@ export function MessageFeed({
         )}
 
         <div className="ml-auto flex shrink-0 items-center gap-1">
+          {onOpenSearch && (
+            <GlobalSearchButton
+              label={channel.name}
+              onOpen={onOpenSearch}
+              className="hidden lg:flex"
+            />
+          )}
           {/*
             The pill is the first thing to go when the header gets tight; the
             title and actions matter more than the connection indicator.

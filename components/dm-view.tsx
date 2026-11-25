@@ -8,9 +8,11 @@ import { UploadDropzone } from "@/components/upload-dropzone";
 import { uploadAttachments } from "@/lib/attachments";
 import { MessageContent } from "@/components/message-content";
 import { DmProfilePanel } from "@/components/dm-profile-panel";
+import { GlobalSearchButton } from "@/components/global-search-button";
 import {
   BellIcon,
   CloseIcon,
+  MoreIcon,
   PhoneIcon,
   SearchIcon,
   TrashIcon,
@@ -36,6 +38,8 @@ export function DmView({
   onStartCall,
   muted: conversationMuted,
   onToggleMute,
+  onOpenSearch,
+  onOpenUserMenu,
 }: {
   channel: DmChannel;
   messages: DirectMessage[];
@@ -64,6 +68,10 @@ export function DmView({
   /** Per-conversation mute; the header bell reflects and toggles it. */
   muted?: boolean;
   onToggleMute?: () => void;
+  /** Opens the global Quick Switcher from the header. */
+  onOpenSearch?: () => void;
+  /** Opens the `…` action menu for the peer, anchored to the button. */
+  onOpenUserMenu?: (anchor: HTMLElement) => void;
 }) {
   const [search, setSearch] = useState<string | null>(null);
   const [composerNote, setComposerNote] = useState<string | null>(null);
@@ -164,6 +172,13 @@ export function DmView({
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1">
+            {onOpenSearch && (
+              <GlobalSearchButton
+                label={group ? groupName : peerName}
+                onOpen={onOpenSearch}
+                className="hidden lg:flex"
+              />
+            )}
             {group && onInviteToGroup && (
               <button
                 onClick={onInviteToGroup}
@@ -199,6 +214,18 @@ export function DmView({
             >
               <PhoneIcon width={16} height={16} />
             </button>
+            {!group && peer && onOpenUserMenu && (
+              <button
+                type="button"
+                onClick={(event) => onOpenUserMenu(event.currentTarget)}
+                title="More options"
+                aria-label={`More options for ${peerName}`}
+                aria-haspopup="menu"
+                className="grid h-8 w-8 place-items-center rounded-md text-muted transition hover:bg-hover/60 hover:text-bright"
+              >
+                <MoreIcon width={17} height={17} />
+              </button>
+            )}
             {!group && (
               <button
                 onClick={() => setShowPanel((v) => !v)}
@@ -430,6 +457,7 @@ export function DmView({
           peer={peer}
           onClose={() => setShowPanel(false)}
           onOpenProfile={() => onOpenProfile?.(peer.id)}
+          onOpenUserMenu={onOpenUserMenu}
         />
       )}
 

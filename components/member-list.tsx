@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
-import { CopyIcon, CheckIcon, CloseIcon, SearchIcon } from "@/components/icons";
+import { CopyIcon, CheckIcon, CloseIcon, MoreIcon, SearchIcon } from "@/components/icons";
 import type { ServerMember, VoiceState } from "@/lib/types";
 
 const roleLabel: Record<string, string> = {
@@ -19,6 +19,7 @@ export function MemberList({
   viewerId,
   onClose,
   onOpenProfile,
+  onOpenUserMenu,
 }: {
   members: ServerMember[];
   voiceStates: VoiceState[];
@@ -26,6 +27,8 @@ export function MemberList({
   onClose?: () => void;
   /** Clicking an avatar/name opens that member's profile card. */
   onOpenProfile?: (userId: string) => void;
+  /** Opens the `…` action menu for a member, anchored to the clicked button. */
+  onOpenUserMenu?: (userId: string, anchor: HTMLElement) => void;
 }) {
   const [query, setQuery] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -92,6 +95,7 @@ export function MemberList({
               member={member}
               isViewer={member.user_id === viewerId}
               onOpenProfile={onOpenProfile}
+              onOpenUserMenu={onOpenUserMenu}
               inVoice={voiceByUser.has(member.user_id)}
               copied={copiedId === member.user_id}
               onCopy={() => void copyUsername(member.profile?.username ?? "member", member.user_id)}
@@ -108,6 +112,7 @@ export function MemberList({
                 member={member}
                 isViewer={member.user_id === viewerId}
               onOpenProfile={onOpenProfile}
+              onOpenUserMenu={onOpenUserMenu}
                 dim
                 inVoice={voiceByUser.has(member.user_id)}
                 copied={copiedId === member.user_id}
@@ -156,6 +161,7 @@ function MemberRow({
   copied,
   onCopy,
   onOpenProfile,
+  onOpenUserMenu,
 }: {
   member: ServerMember;
   isViewer: boolean;
@@ -164,6 +170,7 @@ function MemberRow({
   copied: boolean;
   onCopy: () => void;
   onOpenProfile?: (userId: string) => void;
+  onOpenUserMenu?: (userId: string, anchor: HTMLElement) => void;
 }) {
   const profile = member.profile;
   const name = profile?.display_name || profile?.username || "Member";
@@ -208,6 +215,18 @@ function MemberRow({
           {inVoice && <span className="ml-1 text-mint">· in voice</span>}
         </p>
       </div>
+      {onOpenUserMenu && (
+        <button
+          type="button"
+          onClick={(event) => onOpenUserMenu(member.user_id, event.currentTarget)}
+          title="More options"
+          aria-label={`More options for ${name}`}
+          aria-haspopup="menu"
+          className="grid h-6 w-6 shrink-0 place-items-center rounded text-dim opacity-0 transition group-hover:opacity-100 hover:bg-hover hover:text-bright"
+        >
+          <MoreIcon width={14} height={14} />
+        </button>
+      )}
       <button
         onClick={onCopy}
         title="Copy username"

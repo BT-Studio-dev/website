@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Avatar, presenceLabel } from "@/components/avatar";
-import { CloseIcon, MessageBubbleIcon } from "@/components/icons";
+import { CloseIcon, MessageBubbleIcon, MoreIcon } from "@/components/icons";
 import { formatTime } from "@/lib/format";
 import { effectiveStatus, statusCaption } from "@/lib/presence";
 import type { MessageAuthor, Presence } from "@/lib/types";
@@ -19,6 +19,7 @@ export function DmProfilePanel({
   onClose,
   onOpenProfile,
   activity,
+  onOpenUserMenu,
 }: {
   peer: MessageAuthor & {
     custom_status?: string | null;
@@ -34,6 +35,8 @@ export function DmProfilePanel({
   onClose: () => void;
   onOpenProfile: () => void;
   activity?: { title: string; detail?: string; startedAgo?: number } | null;
+  /** Opens the `…` action menu anchored to the button that was clicked. */
+  onOpenUserMenu?: (anchor: HTMLElement) => void;
 }) {
   const status = effectiveStatus(peer.status, peer.status_expires_at);
   const caption = statusCaption(status, peer.status_expires_at);
@@ -78,13 +81,27 @@ export function DmProfilePanel({
               backgroundPosition: "center",
             }}
           />
-          <button
-            onClick={onClose}
-            aria-label="Close profile panel"
-            className="absolute top-2 right-2 grid h-6 w-6 place-items-center rounded-full bg-black/45 text-white/80 transition hover:bg-black/70 hover:text-white"
-          >
-            <CloseIcon width={12} height={12} />
-          </button>
+          <div className="absolute top-2 right-2 flex items-center gap-1">
+            {onOpenUserMenu && (
+              <button
+                type="button"
+                onClick={(event) => onOpenUserMenu(event.currentTarget)}
+                aria-label={`More options for ${name}`}
+                title="More options"
+                aria-haspopup="menu"
+                className="grid h-6 w-6 place-items-center rounded-full bg-black/45 text-white/80 transition hover:bg-black/70 hover:text-white"
+              >
+                <MoreIcon width={13} height={13} />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              aria-label="Close profile panel"
+              className="grid h-6 w-6 place-items-center rounded-full bg-black/45 text-white/80 transition hover:bg-black/70 hover:text-white"
+            >
+              <CloseIcon width={12} height={12} />
+            </button>
+          </div>
           <div className="absolute -bottom-7 left-4">
             <div className="rounded-full ring-[5px] ring-[color-mix(in_oklab,var(--c-sidebar)_80%,transparent)]">
               <Avatar

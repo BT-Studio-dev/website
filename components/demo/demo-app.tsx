@@ -6,6 +6,8 @@ import { ChannelSidebar } from "@/components/channel-sidebar";
 import { DemoMessageFeed } from "@/components/demo/demo-message-feed";
 import { VoiceRoomPanel } from "@/components/voice-room";
 import { useGlobalKeybinds } from "@/lib/use-keybinds";
+import { QuickSwitcher, type QuickSwitcherItem } from "@/components/quick-switcher";
+import { UserActionMenu, type UserMenuTarget } from "@/components/user-action-menu";
 import { useVoiceRoom } from "@/lib/use-voice-room";
 import { MemberList } from "@/components/member-list";
 import { Modal } from "@/components/modal";
@@ -136,6 +138,13 @@ export function DemoApp({
   const [demoMuted, setDemoMuted] = useState<Record<string, boolean>>({});
   const [voiceRoomId, setVoiceRoomId] = useState<string | null>(null);
   const [boardSignal, setBoardSignal] = useState(0);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [actionTarget, setActionTarget] = useState<{
+    user: UserMenuTarget;
+    anchor: HTMLElement;
+  } | null>(null);
+  const [ignoredUsers, setIgnoredUsers] = useState<Record<string, boolean>>({});
+  const [blockedUsers, setBlockedUsers] = useState<Record<string, boolean>>({});
   const toggleDemoMute = useCallback((id: string) => {
     setDemoMuted((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
@@ -151,6 +160,7 @@ export function DemoApp({
 
   useGlobalKeybinds(
     {
+      quickswitcher: () => setSwitcherOpen((open) => !open),
       "toggle-soundboard": () => {
         if (!voiceRoomId) {
           flash("Join a voice channel to use the soundboard.");
@@ -369,6 +379,75 @@ export function DemoApp({
 
   const activeDm = dmChannels.find((d) => d.id === activeDmId) ?? null;
 
+  const switcherItems = useMemo<QuickSwitcherItem[]>(() => {
+    const items: QuickSwitcherItem[] = [];
+    for (const channel of channels) {
+      items.push({
+        id: channel.id,
+        kind: channel.kind === "voice" ? "voice" : "channel",
+        label: channel.name,
+        hint: server.name,
+      });
+    }
+    for (const entry of demoStore.servers) {
+      items.push({ id: entry.id, kind: "channel", label: entry.name, hint: "Server" });
+    }
+    for (const dm of dmChannels) {
+      if (!dm.peer) continue;
+      items.push({
+        id: dm.peer.id,
+        kind: "dm",
+        label: dm.peer.display_name || dm.peer.username,
+        hint: `@${dm.peer.username}`,
+        avatarUrl: dm.peer.avatar_url,
+        accent: dm.peer.accent_color,
+        status: (dm.peer.status as Presence) ?? "offline",
+      });
+    }
+    for (const member of memberRows) {
+      if (!member.profile || member.user_id === DEMO_USER_ID) continue;
+      items.push({
+        id: member.profile.id,
+        kind: "member",
+        label: member.profile.display_name || member.profile.username,
+        hint: `@${member.profile.username}`,
+        avatarUrl: member.profile.avatar_url,
+        accent: member.profile.accent_color,
+        status: (member.profile.status as Presence) ?? "offline",
+      });
+    }
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      const key = `${item.kind}:${item.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [channels, demoStore.servers, dmChannels, memberRows, server.name]);
+
+  function openSwitcherItem(item: QuickSwitcherItem) {
+    if (item.kind === "dm") {
+      const dm = dmChannels.find((entry) => entry.peer?.id === item.id);
+      if (dm) openDm(dm.id);
+      return;
+    }
+    if (item.kind === "member") {
+      if (item.id === DEMO_USER_ID) setEditorOpen(true);
+      else flash("Demo mode — profiles open for your own account.");
+      return;
+    }
+    if (item.kind === "voice") {
+      demoStore.joinVoice(item.id);
+      setVoiceRoomId(item.id);
+      return;
+    }
+    if (demoStore.servers.some((entry) => entry.id === item.id)) {
+      switchServer(item.id);
+      return;
+    }
+    selectChannel(item.id);
+  }
+
   return (
     <AppearanceProvider
       initial={{
@@ -574,9 +653,28 @@ export function DemoApp({
                     demoSocial.addDmMessage(activeDm.id, content);
                   }}
                   onDelete={(id) => demoSocial.deleteDmMessage(id)}
-                  onStartCall={() => flash("Calls need a signed-in account — try it in the app.")}
+                  onStartCall={() =>
+                    flash(
+                      `Direct calls need a server voice channel — open a server to call ${
+                        activeDm.peer?.display_name ?? activeDm.peer?.username ?? "your friend"
+                      }.`,
+                    )
+                  }
                   muted={Boolean(demoMuted[activeDm.id])}
                   onToggleMute={() => toggleDemoMute(activeDm.id)}
+                  onOpenSearch={() => setSwitcherOpen(true)}
+                  onOpenUserMenu={(anchor) => {
+                    if (!activeDm?.peer) return;
+                    setActionTarget({
+                      user: {
+                        id: activeDm.peer.id,
+                        username: activeDm.peer.username,
+                        display_name: activeDm.peer.display_name,
+                        avatar_url: activeDm.peer.avatar_url,
+                      },
+                      anchor,
+                    });
+                  }}
                 />
               )}
 
@@ -803,6 +901,7 @@ export function DemoApp({
                     demoStore.addMessage(activeChannel.id, content);
                   }}
                   onDelete={(id) => demoStore.deleteMessage(id)}
+                  onOpenSearch={() => setSwitcherOpen(true)}
                 />
               )}
 
@@ -811,6 +910,19 @@ export function DemoApp({
                   members={memberRows}
                   voiceStates={voiceStates}
                   viewerId={DEMO_USER_ID}
+                  onOpenUserMenu={(userId, anchor) => {
+                    const member = memberRows.find((entry) => entry.user_id === userId);
+                    if (!member?.profile) return;
+                    setActionTarget({
+                      user: {
+                        id: member.profile.id,
+                        username: member.profile.username,
+                        display_name: member.profile.display_name,
+                        avatar_url: member.profile.avatar_url,
+                      },
+                      anchor,
+                    });
+                  }}
                   onClose={() => setShowMembers(false)}
                   onOpenProfile={(userId) => {
                     if (userId === DEMO_USER_ID) {
@@ -1193,6 +1305,66 @@ export function DemoApp({
           </div>
         )}
       </div>
+
+      <QuickSwitcher
+        open={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        items={switcherItems}
+        placeholder={
+          view === "server"
+            ? `Search ${server.name}`
+            : `Search ${me.display_name || me.username}`
+        }
+        onOpenItem={openSwitcherItem}
+      />
+
+      {actionTarget && (
+        <UserActionMenu
+          user={actionTarget.user}
+          anchor={actionTarget.anchor}
+          onClose={() => setActionTarget(null)}
+          servers={demoStore.servers.map((entry) => ({ id: entry.id, name: entry.name }))}
+          ignored={Boolean(ignoredUsers[actionTarget.user.id])}
+          blocked={Boolean(blockedUsers[actionTarget.user.id])}
+          onShareProfile={() => {
+            const url = `${window.location.origin}/users/${actionTarget.user.id}`;
+            void navigator.clipboard
+              ?.writeText(url)
+              .then(() => flash("Profile link copied"))
+              .catch(() => flash(url));
+            setActionTarget(null);
+          }}
+          onShopLook={() => {
+            setActionTarget(null);
+            flash("Shop This Look opens the outfit store — no items listed yet.");
+          }}
+          onInviteToServer={(serverId) => {
+            const target = demoStore.servers.find((entry) => entry.id === serverId);
+            setActionTarget(null);
+            if (!target) return;
+            void navigator.clipboard
+              ?.writeText(`${window.location.origin}/channels/@me?invite=${target.invite_code}`)
+              .then(() => flash(`Invite to ${target.name} copied`))
+              .catch(() => flash(`Invite code: ${target.invite_code}`));
+          }}
+          onIgnore={() => {
+            const id = actionTarget.user.id;
+            setIgnoredUsers((prev) => ({ ...prev, [id]: !prev[id] }));
+            flash(ignoredUsers[id] ? "User unignored" : "User ignored");
+            setActionTarget(null);
+          }}
+          onBlock={() => {
+            const id = actionTarget.user.id;
+            setBlockedUsers((prev) => ({ ...prev, [id]: !prev[id] }));
+            flash(blockedUsers[id] ? "User unblocked" : "User blocked");
+            setActionTarget(null);
+          }}
+          onReport={() => {
+            setActionTarget(null);
+            flash("Report submitted — our moderation team will take a look.");
+          }}
+        />
+      )}
     </AppearanceProvider>
   );
 
@@ -1433,6 +1605,7 @@ function DemoSettings({
           </div>
         </main>
       </div>
+
     </div>
   );
 }

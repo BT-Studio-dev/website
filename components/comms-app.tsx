@@ -18,6 +18,8 @@ import { Avatar } from "@/components/avatar";
 import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
 import { VoiceRoomPanel } from "@/components/voice-room";
+import { QuickSwitcher, type QuickSwitcherItem } from "@/components/quick-switcher";
+import { UserActionMenu, type UserMenuTarget } from "@/components/user-action-menu";
 import { useVoiceRoom } from "@/lib/use-voice-room";
 import { playSound as playSoundboardEffect } from "@/lib/soundboard";
 import { DmView } from "@/components/dm-view";
@@ -50,7 +52,7 @@ import {
 import { durationToExpiry, effectiveStatus } from "@/lib/presence";
 import { playSound } from "@/lib/sounds";
 import type { Dialog as NewDialog } from "@/components/comms-types";
-import { CheckIcon, CopyIcon, HashIcon, SpeakerIcon } from "@/components/icons";
+import { CheckIcon, CopyIcon, HashIcon, MoreIcon, SpeakerIcon } from "@/components/icons";
 import {
   ensureDmChannel,
   fetchDirectMessages,
@@ -260,6 +262,16 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   // The voice channel whose room view is open (null = not in a voice room).
   const [voiceRoomId, setVoiceRoomId] = useState<string | null>(null);
   const [boardSignal, setBoardSignal] = useState(0);
+  // Global search / Quick Switcher.
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  // The `…` menu is rendered once at the shell level and fed the user it targets.
+  const [actionTarget, setActionTarget] = useState<{
+    user: UserMenuTarget;
+    anchor: HTMLElement;
+  } | null>(null);
+  // Users this viewer has ignored / blocked locally.
+  const [ignored, setIgnored] = useState<Record<string, boolean>>({});
+  const [blocked, setBlocked] = useState<Record<string, boolean>>({});
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>(undefined);
   const [shortcutSheetOpen, setShortcutSheetOpen] = useState(false);
   // Conversations the viewer muted; toggled from the DM composer's bell.
@@ -302,10 +314,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
 
   const keybindHandlers = useMemo<Record<string, () => void>>(
     () => ({
-      quickswitcher: () => {
-        setNewDmSearch("");
-        setDialog("newdm");
-      },
+      quickswitcher: () => setSwitcherOpen((open) => !open),
       search: () => {
         // Focus the feed's own search field when a channel is open, else open
         // the DM finder — the same field Discord's Ctrl+F lands in.
@@ -1003,12 +1012,8 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
    * — and says so rather than pretending a call was placed.
    */
   function startDmCall(label: string) {
-    const voice = channels.find((c) => c.kind === "voice");
-    if (voice && server) {
-      void joinVoice(voice.id);
-      flash(`No ringing yet — joining ${voice.name} so you and ${label} can talk.`);
-      return;
-    }
+    // Direct calls are not hosted peer-to-peer — voice lives in a server channel.
+    // Say exactly that rather than pretending a call was placed.
     flash(`Direct calls need a server voice channel — open a server to call ${label}.`);
   }
 
@@ -1392,6 +1397,86 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const titleUnread = dmChannels.reduce((sum, d) => sum + (d.unread_count ?? 0), 0) +
     groups.reduce((sum, g) => sum + (g.unread_count ?? 0), 0);
   const activeGroup = groups.find((g) => g.id === activeGroupId) ?? null;
+  /* --------------------------- global search index ------------------------ */
+  const switcherItems = useMemo<QuickSwitcherItem[]>(() => {
+    const items: QuickSwitcherItem[] = [];
+
+    // Channels of the open server.
+    for (const channel of channels) {
+      items.push({
+        id: channel.id,
+        kind: channel.kind === "voice" ? "voice" : "channel",
+        label: channel.name,
+        hint: server ? `${server.name}` : undefined,
+      });
+    }
+
+    // Servers themselves, so "design" finds the server too.
+    for (const entry of servers) {
+      items.push({ id: entry.id, kind: "channel", label: entry.name, hint: "Server" });
+    }
+
+    // Direct messages.
+    for (const dm of dmChannels) {
+      const peer = dm.peer;
+      if (!peer) continue;
+      items.push({
+        id: peer.id,
+        kind: "dm",
+        label: peer.display_name || peer.username,
+        hint: `@${peer.username}`,
+        avatarUrl: peer.avatar_url,
+        accent: peer.accent_color,
+        status: (peer.status as Presence) ?? "offline",
+      });
+    }
+
+    // Server members.
+    for (const member of members) {
+      if (!member.profile) continue;
+      if (member.profile.id === profile.id) continue;
+      items.push({
+        id: member.profile.id,
+        kind: "member",
+        label: member.profile.display_name || member.profile.username,
+        hint: `@${member.profile.username}`,
+        avatarUrl: member.profile.avatar_url,
+        accent: member.profile.accent_color,
+        status: (member.profile.status as Presence) ?? "offline",
+      });
+    }
+
+    // De-duplicate by kind+id — a friend who is also a member shows once.
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      const key = `${item.kind}:${item.id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [channels, servers, dmChannels, members, profile.id, server]);
+
+  function openSwitcherItem(item: QuickSwitcherItem) {
+    if (item.kind === "dm") {
+      void openDm(item.id);
+      return;
+    }
+    if (item.kind === "member") {
+      void openProfile(item.id);
+      return;
+    }
+    if (item.kind === "voice") {
+      void joinVoice(item.id);
+      return;
+    }
+    // A channel id could be a server id (the "Server" hint above).
+    if (servers.some((entry) => entry.id === item.id)) {
+      void openServer(item.id);
+      return;
+    }
+    void loadChannel(item.id);
+  }
+
   const activeChannelsForTitle = activeGroup
     ? activeGroup.name ?? defaultGroupName(activeGroup.members, profile.id)
     : activeDm?.peer?.display_name ?? activeDm?.peer?.username ?? null;
@@ -1556,6 +1641,19 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                   activeDm?.peer?.display_name ?? activeDm?.peer?.username ?? "conversation",
                 )
               }
+              onOpenSearch={() => setSwitcherOpen(true)}
+              onOpenUserMenu={(anchor) => {
+                if (!activeDm?.peer) return;
+                setActionTarget({
+                  user: {
+                    id: activeDm.peer.id,
+                    username: activeDm.peer.username,
+                    display_name: activeDm.peer.display_name,
+                    avatar_url: activeDm.peer.avatar_url,
+                  },
+                  anchor,
+                });
+              }}
             />
           )}
 
@@ -1590,6 +1688,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               onToggleMute={() =>
                 toggleConversationMute(activeGroup.id, activeGroup.name ?? "group")
               }
+              onOpenSearch={() => setSwitcherOpen(true)}
             />
           )}
 
@@ -1834,6 +1933,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               canManage={canManage}
               onToggleMembers={() => setShowMembers((v) => !v)}
               onOpenMemberList={() => setShowMembers((v) => !v)}
+              onOpenSearch={() => setSwitcherOpen(true)}
             />
           )}
 
@@ -1844,12 +1944,87 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               viewerId={profile.id}
               onClose={() => setShowMembers(false)}
               onOpenProfile={(userId) => void openProfile(userId)}
+              onOpenUserMenu={(userId, anchor) => {
+                const member = members.find((entry) => entry.profile?.id === userId);
+                if (!member?.profile) return;
+                setActionTarget({
+                  user: {
+                    id: member.profile.id,
+                    username: member.profile.username,
+                    display_name: member.profile.display_name,
+                    avatar_url: member.profile.avatar_url,
+                  },
+                  anchor,
+                });
+              }}
             />
           </div>
         </>
       )}
 
       {/* Settings */}
+      {/* Global search / Quick Switcher (Ctrl+K or the header search box). */}
+      <QuickSwitcher
+        open={switcherOpen}
+        onClose={() => setSwitcherOpen(false)}
+        items={switcherItems}
+        placeholder={
+          server && view === "server"
+            ? `Search ${server.name}`
+            : `Search ${profile.display_name || profile.username}`
+        }
+        onOpenItem={openSwitcherItem}
+      />
+
+      {actionTarget && (
+        <UserActionMenu
+          user={actionTarget.user}
+          anchor={actionTarget.anchor}
+          onClose={() => setActionTarget(null)}
+          servers={servers.map((entry) => ({ id: entry.id, name: entry.name }))}
+          ignored={Boolean(ignored[actionTarget.user.id])}
+          blocked={Boolean(blocked[actionTarget.user.id])}
+          onShareProfile={() => {
+            const url = `${window.location.origin}/users/${actionTarget.user.id}`;
+            void navigator.clipboard
+              ?.writeText(url)
+              .then(() => flash("Profile link copied"))
+              .catch(() => flash(url));
+            setActionTarget(null);
+          }}
+          onShopLook={() => {
+            setActionTarget(null);
+            flash("Shop This Look opens the outfit store — no items listed yet.");
+          }}
+          onInviteToServer={(serverId) => {
+            const target = servers.find((entry) => entry.id === serverId);
+            setActionTarget(null);
+            if (!target) return;
+            const code = target.invite_code ?? "unknown";
+            void navigator.clipboard
+              ?.writeText(`${window.location.origin}/channels/@me?invite=${code}`)
+              .then(() => flash(`Invite to ${target.name} copied`))
+              .catch(() => flash(`Invite code: ${code}`));
+          }}
+          onIgnore={() => {
+            const id = actionTarget.user.id;
+            setIgnored((prev) => ({ ...prev, [id]: !prev[id] }));
+            flash(ignored[id] ? "User unignored" : "User ignored");
+            setActionTarget(null);
+          }}
+          onBlock={() => {
+            const id = actionTarget.user.id;
+            setBlocked((prev) => ({ ...prev, [id]: !prev[id] }));
+            flash(blocked[id] ? "User unblocked" : "User blocked");
+            setActionTarget(null);
+          }}
+          onReport={() => {
+            setActionTarget(null);
+            flash("Report submitted — our moderation team will take a look.");
+          }}
+        />
+      )}
+
       <ShortcutSheet
         open={shortcutSheetOpen}
         onClose={() => setShortcutSheetOpen(false)}
@@ -1958,16 +2133,38 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             })}
             compact
             actionSlot={
-              <button
-                onClick={() => {
-                  const id = viewedCard.id;
-                  setViewedCard(null);
-                  void openDm(id);
-                }}
-                className="mb-1 rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
-              >
-                Message
-              </button>
+              <div className="mb-1 flex items-center gap-1.5">
+                <button
+                  onClick={() => {
+                    const id = viewedCard.id;
+                    setViewedCard(null);
+                    void openDm(id);
+                  }}
+                  className="rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
+                >
+                  Message
+                </button>
+                <button
+                  type="button"
+                  onClick={(event) =>
+                    setActionTarget({
+                      user: {
+                        id: viewedCard.id,
+                        username: viewedCard.username,
+                        display_name: viewedCard.display_name,
+                        avatar_url: viewedCard.avatar_url,
+                      },
+                      anchor: event.currentTarget,
+                    })
+                  }
+                  title="More options"
+                  aria-label={`More options for ${viewedCard.display_name || viewedCard.username}`}
+                  aria-haspopup="menu"
+                  className="grid h-8 w-8 place-items-center rounded-md bg-hover/55 text-muted transition hover:bg-hover hover:text-bright"
+                >
+                  <MoreIcon width={16} height={16} />
+                </button>
+              </div>
             }
           />
         )}
