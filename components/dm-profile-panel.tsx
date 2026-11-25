@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Avatar, presenceLabel } from "@/components/avatar";
-import { CloseIcon, MessageBubbleIcon, MoreIcon } from "@/components/icons";
-import { formatTime } from "@/lib/format";
+import { CloseIcon, HeadphonesIcon, MessageBubbleIcon, MoreIcon } from "@/components/icons";
+import { activityFromStatus, activityLabel } from "@/lib/activity";
 import { effectiveStatus, statusCaption } from "@/lib/presence";
-import type { MessageAuthor, Presence } from "@/lib/types";
+import type { ActiveActivity, MessageAuthor, Presence } from "@/lib/types";
 
 /**
  * Right-hand profile panel for a 1:1 DM.
@@ -34,7 +34,8 @@ export function DmProfilePanel({
   };
   onClose: () => void;
   onOpenProfile: () => void;
-  activity?: { title: string; detail?: string; startedAgo?: number } | null;
+  /** The peer's real activity, derived by the caller from their status. */
+  activity?: ActiveActivity | null;
   /** Opens the `…` action menu anchored to the button that was clicked. */
   onOpenUserMenu?: (anchor: HTMLElement) => void;
 }) {
@@ -42,19 +43,28 @@ export function DmProfilePanel({
   const caption = statusCaption(status, peer.status_expires_at);
   const name = peer.display_name || peer.username;
 
-  const defaultActivity = {
-    title: "BT Comms Arena",
-    detail: "Ranked · 2 of 5",
-    startedAgo: 42,
-  };
-  const current = activity ?? defaultActivity;
+  /**
+   * Prefer the activity the caller resolved; otherwise read it straight off the
+   * peer's status. Never invent one — an absent activity renders no card.
+   */
+  const resolved = activity
+    ? { activity, label: activityLabel(activity.kind) }
+    : activityFromStatus(peer.custom_status);
+  const current = resolved?.activity ?? null;
 
-  // Elapsed timer ticks every second so the card feels live.
-  const [elapsed, setElapsed] = useState((current?.startedAgo ?? 0) * 60);
+  // The elapsed clock is anchored to the real start time, so it survives a
+  // panel remount and never restarts from zero while the user watches.
+  const startedAt = current?.started_at ? Date.parse(current.started_at) : null;
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setElapsed((v) => v + 1), 1000);
+    if (!startedAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [startedAt]);
+  const elapsed = startedAt ? Math.max(0, Math.floor((now - startedAt) / 1000)) : null;
+
+  // The viewer can dismiss the card; it stays dismissed for this session.
+  const [activityHidden, setActivityHidden] = useState(false);
 
   const memberSince = peer.created_at
     ? new Date(peer.created_at).toLocaleDateString(undefined, {
@@ -143,21 +153,42 @@ export function DmProfilePanel({
             <p className="text-[12.5px] font-semibold text-bright">{memberSince}</p>
           </Card>
 
-          {/* current activity */}
-          {status !== "offline" && (
-            <Card title="Playing a Game">
+          {/* current activity — only when the peer actually reports one */}
+          {status !== "offline" && current && !activityHidden && (
+            <Card
+              title={resolved?.label ?? activityLabel(current.kind)}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setActivityHidden(true)}
+                  aria-label={`Hide ${name}'s activity`}
+                  title="Hide activity"
+                  className="grid h-4 w-4 place-items-center rounded text-dim transition hover:bg-hover hover:text-bright"
+                >
+                  <CloseIcon width={11} height={11} />
+                </button>
+              }
+            >
               <div className="flex items-start gap-2.5">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-blurple to-blurple-soft text-[color:var(--c-on-accent)]">
-                  <BoltMark />
+                  {current.kind === "music" ? (
+                    <HeadphonesIcon width={16} height={16} />
+                  ) : (
+                    <BoltMark />
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[12.5px] font-semibold text-bright">
-                    {current?.title}
+                    {current.title}
                   </p>
-                  <p className="truncate text-[11px] text-dim">{current?.detail}</p>
-                  <p className="mt-0.5 font-mono text-[11px] tabular-nums text-mint">
-                    {formatElapsed(elapsed)} elapsed
-                  </p>
+                  {current.detail && (
+                    <p className="truncate text-[11px] text-dim">{current.detail}</p>
+                  )}
+                  {elapsed !== null && (
+                    <p className="mt-0.5 font-mono text-[11px] tabular-nums text-mint">
+                      {formatElapsed(elapsed)} elapsed
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -178,10 +209,22 @@ export function DmProfilePanel({
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  /** Optional control pinned to the right of the heading (e.g. dismiss). */
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <div className="mt-3 rounded-lg border border-subtle bg-hover/45 p-2.5">
-      <p className="mb-1.5 text-[10px] font-bold tracking-[0.12em] text-dim uppercase">{title}</p>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <p className="text-[10px] font-bold tracking-[0.12em] text-dim uppercase">{title}</p>
+        {action}
+      </div>
       {children}
     </div>
   );
@@ -217,4 +260,4 @@ function formatElapsed(totalSeconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-export { formatElapsed, formatTime };
+export { formatElapsed };

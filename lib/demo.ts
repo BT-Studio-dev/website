@@ -739,10 +739,35 @@ export const demoDms: DemoDm[] = [
   },
 ];
 
-export const demoActivities: Record<string, { kind: "game" | "music" | "code" | "voice"; title: string; detail?: string }> = {
-  [PEOPLE[0].id]: { kind: "code", title: "bt-comms/app", detail: "Editing components/settings" },
-  [PEOPLE[1].id]: { kind: "music", title: "Lo-fi Beats to Ship To", detail: "Spotify · playlist" },
-  [PEOPLE[2].id]: { kind: "game", title: "BT Comms Arena", detail: "Ranked · 3 of 5" },
+/**
+ * Fixed "started" anchor for the demo activities. It is a real timestamp, so
+ * the elapsed clock on a profile card reports genuine elapsed time, and it is
+ * computed once at module load so it does not jump between renders.
+ */
+const ACTIVITY_STARTED_AT = new Date(Date.now() - 42 * 60 * 1000).toISOString();
+
+export const demoActivities: Record<
+  string,
+  { kind: "game" | "music" | "code" | "voice"; title: string; detail?: string; started_at?: string }
+> = {
+  [PEOPLE[0].id]: {
+    kind: "code",
+    title: "bt-comms/app",
+    detail: "Editing components/settings",
+    started_at: ACTIVITY_STARTED_AT,
+  },
+  [PEOPLE[1].id]: {
+    kind: "music",
+    title: "Lo-fi Beats to Ship To",
+    detail: "Spotify · playlist",
+    started_at: ACTIVITY_STARTED_AT,
+  },
+  [PEOPLE[2].id]: {
+    kind: "game",
+    title: "BT Comms Arena",
+    detail: "Ranked · 3 of 5",
+    started_at: ACTIVITY_STARTED_AT,
+  },
 };
 
 let dmCounter = 500;

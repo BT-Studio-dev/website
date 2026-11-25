@@ -221,12 +221,6 @@ export function CommsLoader({
           setState({ phase: "loading" });
           void load();
         }}
-        onCancel={() => {
-          // Stop waiting and hand the user something usable instead of a
-          // spinner they cannot dismiss.
-          setDemoReason("cancelled");
-          setDemo(true);
-        }}
       />
     );
   }

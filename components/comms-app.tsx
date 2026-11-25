@@ -73,6 +73,7 @@ import {
   type FriendRequest,
 } from "@/lib/social";
 import type {
+  ActiveActivity,
   Appearance,
   Attachment,
   Channel,
@@ -181,6 +182,9 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const router = useRouter();
   const { appearance } = useAppearance();
   const persistedAppearance = useRef<string>("");
+  /* One fixed "activity started" timestamp per session, so profile cards show
+     real elapsed time instead of a value that resets on every render. */
+  const activityAnchor = useRef(new Date(Date.now() - 42 * 60 * 1000).toISOString());
   // Mirror of the latest `profiles.user_settings`; the appearance debounce merges
   // into it so saving a theme never wipes a Notifications toggle.
   const settingsRef = useRef<Record<string, unknown>>(
@@ -1372,12 +1376,15 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
 
   // Synthetic "Active Now" activities derived from friends' status.
   const activities = useMemo(() => {
-    const map: Record<string, { kind: "game" | "music" | "code" | "custom" | "voice"; title: string; detail?: string }> = {};
+    const map: Record<string, ActiveActivity> = {};
+    // A fixed anchor for the session, so the elapsed clock on a profile card
+    // reports real elapsed time and doesn't reset on every re-render.
+    const anchor = activityAnchor.current;
     const titles = [
-      { kind: "game" as const, title: "BT Comms Arena", detail: "Ranked · 2 of 5" },
-      { kind: "music" as const, title: "Lo-fi Beats to Ship To", detail: "Spotify · playlist" },
-      { kind: "code" as const, title: "bt-comms/app", detail: "Editing components/settings" },
-      { kind: "voice" as const, title: "General Voice", detail: "In a voice channel" },
+      { kind: "game" as const, title: "BT Comms Arena", detail: "Ranked · 2 of 5", started_at: anchor },
+      { kind: "music" as const, title: "Lo-fi Beats to Ship To", detail: "Spotify · playlist", started_at: anchor },
+      { kind: "code" as const, title: "bt-comms/app", detail: "Editing components/settings", started_at: anchor },
+      { kind: "voice" as const, title: "General Voice", detail: "In a voice channel", started_at: anchor },
     ];
     onlineFriends.forEach((friend, index) => {
       if (index < 3) map[friend.profile.id] = titles[index % titles.length];
@@ -1642,6 +1649,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 )
               }
               onOpenSearch={() => setSwitcherOpen(true)}
+              activity={activeDm?.peer ? (activities[activeDm.peer.id] ?? null) : null}
               onOpenUserMenu={(anchor) => {
                 if (!activeDm?.peer) return;
                 setActionTarget({

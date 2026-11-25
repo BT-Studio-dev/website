@@ -11,6 +11,7 @@ import { UserActionMenu, type UserMenuTarget } from "@/components/user-action-me
 import { useVoiceRoom } from "@/lib/use-voice-room";
 import { MemberList } from "@/components/member-list";
 import { Modal } from "@/components/modal";
+import { ProfileCard } from "@/components/profile/profile-card";
 import { Avatar } from "@/components/avatar";
 import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
@@ -103,6 +104,8 @@ export function DemoApp({
   const [bannerVisible, setBannerVisible] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  /* A peer profile opened from a DM panel / member list / quick switcher. */
+  const [demoViewedProfile, setDemoViewedProfile] = useState<Profile | null>(null);
 
   const me = demoStore.profile;
 
@@ -379,6 +382,30 @@ export function DemoApp({
 
   const activeDm = dmChannels.find((d) => d.id === activeDmId) ?? null;
 
+  /**
+   * Finds any demo person by id across members, friends and DM peers.
+   *
+   * Previously every "open profile" affordance in demo mode just flashed
+   * "profiles open for your own account" and did nothing — a dead control.
+   * Now it resolves the real profile and opens the same card the live app uses.
+   */
+  const openDemoProfile = (userId: string) => {
+    if (userId === DEMO_USER_ID || userId === demoStore.profile.id) {
+      setEditorOpen(true);
+      return;
+    }
+    const found =
+      memberRows.find((m) => m.user_id === userId)?.profile ??
+      friends.find((f) => f.profile.id === userId)?.profile ??
+      dmChannels.find((d) => d.peer?.id === userId)?.peer ??
+      null;
+    if (!found) {
+      flash("That profile isn't part of this demo snapshot.");
+      return;
+    }
+    setDemoViewedProfile(found as Profile);
+  };
+
   const switcherItems = useMemo<QuickSwitcherItem[]>(() => {
     const items: QuickSwitcherItem[] = [];
     for (const channel of channels) {
@@ -432,8 +459,7 @@ export function DemoApp({
       return;
     }
     if (item.kind === "member") {
-      if (item.id === DEMO_USER_ID) setEditorOpen(true);
-      else flash("Demo mode — profiles open for your own account.");
+      openDemoProfile(item.id);
       return;
     }
     if (item.kind === "voice") {
@@ -468,9 +494,7 @@ export function DemoApp({
                 ? "you're exploring an in-memory snapshot of the workspace."
                 : reason === "offline"
                   ? "Supabase isn't reachable from this browser, so you're exploring an in-memory snapshot."
-                  : reason === "cancelled"
-                    ? "you stopped the connection, so you're exploring an in-memory snapshot."
-                    : reason === "timeout"
+                  : reason === "timeout"
                       ? "the connection took too long, so you're exploring an in-memory snapshot."
                       : "No Supabase project configured yet."}{" "}
               Messages are not persisted.
@@ -667,6 +691,7 @@ export function DemoApp({
                   muted={Boolean(demoMuted[activeDm.id])}
                   onToggleMute={() => toggleDemoMute(activeDm.id)}
                   onOpenSearch={() => setSwitcherOpen(true)}
+                  activity={(activeDm.peer && activities[activeDm.peer.id]) || null}
                   onOpenUserMenu={(anchor) => {
                     if (!activeDm?.peer) return;
                     setActionTarget({
@@ -702,10 +727,7 @@ export function DemoApp({
                   onDelete={(id) =>
                     demoStore.groupMessages = demoStore.groupMessages.filter((m) => m.id !== id)
                   }
-                  onOpenProfile={(userId) => {
-                    if (userId === DEMO_USER_ID) setEditorOpen(true);
-                    else flash("Demo mode — profiles open for your own account.");
-                  }}
+                  onOpenProfile={openDemoProfile}
                   group={{
                     id: activeGroup.id,
                     name: activeGroup.name,
@@ -928,18 +950,58 @@ export function DemoApp({
                     });
                   }}
                   onClose={() => setShowMembers(false)}
-                  onOpenProfile={(userId) => {
-                    if (userId === DEMO_USER_ID) {
-                      setEditorOpen(true);
-                      return;
-                    }
-                    flash("Demo mode — profiles open for your own account.");
-                  }}
+                  onOpenProfile={openDemoProfile}
                 />
               </div>
             </>
           )}
         </div>
+
+        {/* A peer's profile, opened from the DM panel, member list or switcher.
+            Mirrors the live app's card so "View Full Profile" isn't a no-op. */}
+        <Modal
+          open={Boolean(demoViewedProfile) && !editorOpen}
+          title={
+            demoViewedProfile
+              ? `${demoViewedProfile.display_name || demoViewedProfile.username}'s profile`
+              : "Profile"
+          }
+          description="Click Message to open a DM, or close to carry on."
+          onClose={() => setDemoViewedProfile(null)}
+        >
+          {demoViewedProfile && (
+            <ProfileCard
+              profile={demoViewedProfile}
+              memberSince={new Date(demoViewedProfile.created_at).toLocaleDateString(undefined, {
+                month: "long",
+                year: "numeric",
+              })}
+              compact
+              actionSlot={
+                <div className="mb-1 flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      const id = demoViewedProfile.id;
+                      setDemoViewedProfile(null);
+                      const dm = dmChannels.find((entry) => entry.peer?.id === id);
+                      if (dm) openDm(dm.id);
+                      else flash("No conversation with that member yet.");
+                    }}
+                    className="rounded-md bg-blurple px-3 py-1 text-[12px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
+                  >
+                    Message
+                  </button>
+                  <button
+                    onClick={() => setDemoViewedProfile(null)}
+                    className="rounded-md px-3 py-1 text-[12px] font-semibold text-muted transition hover:text-bright"
+                  >
+                    Close
+                  </button>
+                </div>
+              }
+            />
+          )}
+        </Modal>
 
         {editorOpen && (
           <EditProfileModal

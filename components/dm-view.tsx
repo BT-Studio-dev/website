@@ -19,7 +19,15 @@ import {
   UsersIcon,
 } from "@/components/icons";
 import { formatDayLabel, formatTimestamp, formatTime, sameDay, shouldGroup } from "@/lib/format";
-import type { Attachment, DirectMessage, DmChannel, MessageAuthor, Presence, Profile } from "@/lib/types";
+import type {
+  ActiveActivity,
+  Attachment,
+  DirectMessage,
+  DmChannel,
+  MessageAuthor,
+  Presence,
+  Profile,
+} from "@/lib/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export function DmView({
@@ -40,6 +48,7 @@ export function DmView({
   onToggleMute,
   onOpenSearch,
   onOpenUserMenu,
+  activity,
 }: {
   channel: DmChannel;
   messages: DirectMessage[];
@@ -70,6 +79,8 @@ export function DmView({
   onToggleMute?: () => void;
   /** Opens the global Quick Switcher from the header. */
   onOpenSearch?: () => void;
+  /** The peer's current activity for the profile panel, if they report one. */
+  activity?: ActiveActivity | null;
   /** Opens the `…` action menu for the peer, anchored to the button. */
   onOpenUserMenu?: (anchor: HTMLElement) => void;
 }) {
@@ -458,6 +469,7 @@ export function DmView({
           onClose={() => setShowPanel(false)}
           onOpenProfile={() => onOpenProfile?.(peer.id)}
           onOpenUserMenu={onOpenUserMenu}
+          activity={activity ?? null}
         />
       )}
 

@@ -148,12 +148,19 @@ rejected promise used to escape with the phase still `"loading"`, which is how a
 visit could hang on the spinner indefinitely. Anything that throws now lands on
 the error screen with a real message.
 
-While the spinner is up there are always **Restart** and **Stop loading**
-controls. Stop hands the user the demo workspace immediately instead of making
-them wait out the nine-second timeout, and cancelling also suppresses the
-timeout's own fallback so the two can't fight.
+The spinner carries no permanent button row — recovery only appears once it is
+genuinely needed. After nine seconds an amber panel offers **Retry** and **Open
+demo workspace**. Hitting Retry clears the timeout flag before re-running the
+load, so a stale timer can never undo the user's choice a moment later.
 
-### Search and user menus
+### Activity cards
+
+`lib/activity.ts` turns a user's free-text `custom_status` back into a
+structured activity (`Playing a Game`, `Listening to Spotify`, `Editing Code`,
+`Watching Something`). The DM profile panel renders that card only when the peer
+actually reports an activity — there is no placeholder text — and its elapsed
+clock is anchored to a real `started_at`, so it keeps counting across remounts
+instead of resetting. The card can be dismissed with the `×` in its heading.
 
 **Quick Switcher** (`Ctrl+K`, or the “Search …” box in a channel or DM header)
 opens one overlay over the live index of channels, voice channels, servers, DMs

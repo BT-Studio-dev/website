@@ -6,9 +6,10 @@ import { BoltIcon } from "@/components/icons";
 /**
  * The centered loading screen.
  *
- * Rotating tips keep it feeling alive, and a hard timeout (`TIMEOUT_MS`)
- * guarantees the user never gets stuck on "Connecting to BT Comms" — after
- * that it offers to retry or drop into the demo workspace.
+ * Rotating tips keep it feeling alive. Recovery is deliberately unobtrusive:
+ * no permanent button row under the spinner — only a hard timeout (`TIMEOUT_MS`)
+ * that reveals the amber panel with Retry / Open demo workspace once the
+ * connection has genuinely stalled.
  */
 
 const TIPS = [
@@ -31,17 +32,13 @@ const TIMEOUT_MS = 9000;
 export function LoadingScreen({
   onFallback,
   onRetry,
-  onCancel,
   label = "Connecting to BT Comms",
 }: {
   onFallback: () => void;
   onRetry?: () => void;
-  /** Stops waiting and leaves the spinner immediately. */
-  onCancel?: () => void;
   label?: string;
 }) {
   const [timedOut, setTimedOut] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
   const [tip, setTip] = useState(0);
 
   // Random start so repeat visits don't always open on the same tip.
@@ -57,11 +54,11 @@ export function LoadingScreen({
     };
   }, [start]);
 
-  // Only auto-fall-back while the user is still waiting. Cancelling or hitting
-  // Retry must not be undone a moment later by this timer.
+  // Retry clears `timedOut` before the timer can fire again, so a retry is
+  // never undone a moment later by this fallback.
   useEffect(() => {
-    if (timedOut && !cancelled) onFallback();
-  }, [timedOut, cancelled, onFallback]);
+    if (timedOut) onFallback();
+  }, [timedOut, onFallback]);
 
   return (
     <div className="ambient-stage grid h-dvh place-items-center px-6">
@@ -97,35 +94,6 @@ export function LoadingScreen({
             />
           ))}
         </div>
-
-        {!timedOut && (onCancel || onRetry) && (
-          <div className="mt-5 flex gap-2">
-            {onRetry && (
-              <button
-                type="button"
-                onClick={() => {
-                  setTimedOut(false);
-                  onRetry();
-                }}
-                className="rounded-md bg-raised px-3 py-1.5 text-[12px] font-semibold text-bright ring-1 ring-line transition hover:bg-hover"
-              >
-                Restart
-              </button>
-            )}
-            {onCancel && (
-              <button
-                type="button"
-                onClick={() => {
-                  setCancelled(true);
-                  onCancel();
-                }}
-                className="rounded-md px-3 py-1.5 text-[12px] font-semibold text-muted transition hover:text-bright"
-              >
-                Stop loading
-              </button>
-            )}
-          </div>
-        )}
 
         {timedOut && (
           <div className="mt-5 w-full rounded-xl border border-amber/30 bg-amber/10 p-3">
