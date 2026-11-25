@@ -1205,15 +1205,6 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         accent_color: profile.accent_color,
         active: true,
       },
-      {
-        id: "secondary-sol",
-        email: "sol@btcomms.test",
-        username: "sol",
-        display_name: "Sol",
-        avatar_url: null,
-        accent_color: "#22c55e",
-        active: false,
-      },
     ]);
   }, [profile, initial.email]);
 
@@ -2264,6 +2255,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           setDialog(null);
           router.push("/login?next=/channels/@me");
         }}
+        onRemove={(id) => setAccounts((prev) => prev.filter((a) => a.id !== id))}
         busy={busy}
       />
 

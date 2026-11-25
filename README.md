@@ -153,6 +153,18 @@ genuinely needed. After nine seconds an amber panel offers **Retry** and **Open
 demo workspace**. Hitting Retry clears the timeout flag before re-running the
 load, so a stale timer can never undo the user's choice a moment later.
 
+### Data hygiene
+
+The database holds real accounts only. The two seeded fixtures (`ada@btcomms.test`
+and `sol@btcomms.test`) were removed by
+`supabase/migrations/0013_strip_seed_accounts.sql`, which hands server ownership
+and admin roles to a real member *before* deleting them — otherwise the shared
+"BT Comms" server would have been left with no owner. Fixture-only DM
+conversations go with them; conversations involving a real account are kept.
+
+Demo mode still ships its own in-memory fixtures (`lib/demo.ts`), which never
+touch Supabase.
+
 ### Clipboard
 
 Every copy control goes through `lib/clipboard.ts` and reports the outcome.

@@ -609,24 +609,23 @@ export const demoStore = {
 
   /* -------------------------- v4: accounts ---------------------------- */
 
+  /**
+   * Accounts remembered on this device.
+   *
+   * This used to list a second account (`sol@btcomms.test`) that never existed
+   * as a real user, so "Switch" signed the viewer out and pointed them at a
+   * login that could only fail. Only the signed-in account is listed now; more
+   * appear when you actually add one.
+   */
   accounts: [
     {
       id: ME.id,
-      email: "ada@btcomms.test",
+      email: "you@btcomms.app",
       username: ME.username,
       display_name: ME.display_name,
       avatar_url: ME.avatar_url,
       accent_color: ME.accent_color,
       active: true,
-    },
-    {
-      id: "demo-user-sol",
-      email: "sol@btcomms.test",
-      username: "sol",
-      display_name: "Sol Kim",
-      avatar_url: null,
-      accent_color: "#3ba55d",
-      active: false,
     },
   ] as LinkedAccount[],
 

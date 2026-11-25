@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { CloseIcon, PlusIcon } from "@/components/icons";
 import { Modal } from "@/components/modal";
@@ -16,6 +15,7 @@ export function ManageAccountsModal({
   accounts,
   onSwitch,
   onAddAccount,
+  onRemove,
   busy,
 }: {
   open: boolean;
@@ -23,10 +23,11 @@ export function ManageAccountsModal({
   accounts: LinkedAccount[];
   onSwitch: (accountId: string) => void;
   onAddAccount: () => void;
+  /** Forgets a remembered account on this device. */
+  onRemove: (accountId: string) => void;
   busy?: boolean;
 }) {
-  const [removed, setRemoved] = useState<string[]>([]);
-  const visible = accounts.filter((a) => !removed.includes(a.id));
+  const visible = accounts;
 
   return (
     <Modal
@@ -80,9 +81,15 @@ export function ManageAccountsModal({
                 {account.active ? "Signed in" : "Switch"}
               </button>
               <button
-                onClick={() => setRemoved((prev) => [...prev, account.id])}
+                onClick={() => onRemove(account.id)}
+                disabled={account.active}
+                title={
+                  account.active
+                    ? "Sign out to remove the account you're using"
+                    : `Remove ${account.username}`
+                }
                 aria-label={`Remove ${account.username}`}
-                className="grid h-6 w-6 shrink-0 place-items-center rounded text-dim transition hover:text-rose"
+                className="grid h-6 w-6 shrink-0 place-items-center rounded text-dim transition hover:text-rose disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:text-dim"
               >
                 <CloseIcon width={12} height={12} />
               </button>

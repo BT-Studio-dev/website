@@ -1123,6 +1123,11 @@ export function DemoApp({
             setDialog(null);
             flash("Demo mode — add an account from /login.");
           }}
+          onRemove={(id) => {
+            demoStore.accounts = demoStore.accounts.filter((a) => a.id !== id);
+            setDialog(null);
+            flash("Account removed from this device.");
+          }}
         />
 
         {/* Create Your Server */}
