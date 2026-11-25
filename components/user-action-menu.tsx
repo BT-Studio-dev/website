@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckIcon, CopyIcon, MoreIcon } from "@/components/icons";
 import type { MessageAuthor } from "@/lib/types";
+import { copyText, revealValue } from "@/lib/clipboard";
 
 /**
  * The `…` action menu for a user — the same list the reference UI shows on a
@@ -109,17 +110,17 @@ export function UserActionMenu({
 
   const copy = useCallback(
     async (label: string, value: string) => {
-      try {
-        await navigator.clipboard.writeText(value);
+      const ok = await copyText(value);
+      if (ok) {
         setCopied(label);
         setTimeout(() => setCopied((current) => (current === label ? null : current)), 1500);
-      } catch {
-        // Clipboard access can be denied; surfacing the value is the honest
-        // fallback rather than a silent failure or a false success toast.
-        setCopied(null);
-        onClose();
-        window.prompt(`Copy ${label}`, value);
+        return;
       }
+      // Clipboard access can be denied; surfacing the value is the honest
+      // fallback rather than a silent failure or a false success toast.
+      setCopied(null);
+      onClose();
+      revealValue(label, value);
     },
     [onClose],
   );

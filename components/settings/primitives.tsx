@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon, PencilIcon } from "@/components/icons";
+import { copyText, revealValue } from "@/lib/clipboard";
 
 /* ------------------------------- layout -------------------------------- */
 
@@ -328,13 +329,15 @@ export function MaskedRow({
   const [copied, setCopied] = useState(false);
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
+    const ok = await copyText(value);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1400);
-    } catch {
-      /* clipboard blocked */
+      return;
     }
+    // Clipboard blocked — show the value so the click still achieves something.
+    setCopied(false);
+    revealValue(label, value);
   }
 
   return (

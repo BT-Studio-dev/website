@@ -93,6 +93,7 @@ import type {
 } from "@/lib/types";
 import type { ServerIntent, ServerTemplate } from "@/lib/server-templates";
 import { activityFromStatus } from "@/lib/activity";
+import { copyText, revealValue } from "@/lib/clipboard";
 import type { SettingsSectionId } from "@/components/settings/settings-nav";
 
 type LegacyDialog = Extract<NewDialog, "invite" | "profile" | "channel" | "explore">;
@@ -362,8 +363,10 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           ? "/channels/@me"
           : `/channels/${state.activeServerId}/${state.activeChannelId}`;
         const url = `${window.location.origin}${path}`;
-        void navigator.clipboard?.writeText(url).catch(() => undefined);
-        flash("Channel link copied");
+        void copyText(url).then((ok) => {
+          if (ok) flash("Channel link copied");
+          else revealValue("channel link", url);
+        });
       },
       "toggle-mute": () => {
         setMuted((prev) => {
@@ -996,14 +999,15 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   async function copyInvite() {
     if (!server) return;
     const url = `${window.location.origin}/channels/@me?invite=${server.invite_code}`;
-    try {
-      await navigator.clipboard.writeText(url);
+    if (await copyText(url)) {
       setInviteCopied(true);
       flash("Invite link copied");
       setTimeout(() => setInviteCopied(false), 1600);
-    } catch {
-      flash(server.invite_code);
+      return;
     }
+    // Copying was blocked. Show the whole link — flashing only the code gives
+    // the user nothing they can paste.
+    revealValue("invite link", url);
   }
 
   /**
@@ -1569,8 +1573,10 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             }}
             onSwitchAccounts={() => setDialog("accounts")}
             onCopyUserId={() => {
-              void navigator.clipboard?.writeText(profile.id).catch(() => undefined);
-              flash("User ID copied");
+              void copyText(profile.id).then((ok) => {
+                if (ok) flash("User ID copied");
+                else revealValue("user ID", profile.id);
+              });
             }}
             muted={muted}
             deafened={deafened}
@@ -1763,8 +1769,10 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                     void leaveServer();
                     break;
                   case "copy-info":
-                    void navigator.clipboard?.writeText(server.id).catch(() => undefined);
-                    flash("Server ID copied");
+                    void copyText(server.id).then((ok) => {
+                      if (ok) flash("Server ID copied");
+                      else revealValue("server ID", server.id);
+                    });
                     break;
                   case "settings":
                     flash("Server Settings open in the admin panel.");
@@ -1809,8 +1817,10 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
               }}
               onSwitchAccounts={() => setDialog("accounts")}
               onCopyUserId={() => {
-                void navigator.clipboard?.writeText(profile.id).catch(() => undefined);
-                flash("User ID copied");
+                void copyText(profile.id).then((ok) => {
+                  if (ok) flash("User ID copied");
+                  else revealValue("user ID", profile.id);
+                });
               }}
               muted={muted}
               deafened={deafened}
@@ -1999,10 +2009,10 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           blocked={Boolean(blocked[actionTarget.user.id])}
           onShareProfile={() => {
             const url = `${window.location.origin}/users/${actionTarget.user.id}`;
-            void navigator.clipboard
-              ?.writeText(url)
-              .then(() => flash("Profile link copied"))
-              .catch(() => flash(url));
+            void copyText(url).then((ok) => {
+              if (ok) flash("Profile link copied");
+              else revealValue("profile link", url);
+            });
             setActionTarget(null);
           }}
           onShopLook={() => {
@@ -2014,10 +2024,11 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             setActionTarget(null);
             if (!target) return;
             const code = target.invite_code ?? "unknown";
-            void navigator.clipboard
-              ?.writeText(`${window.location.origin}/channels/@me?invite=${code}`)
-              .then(() => flash(`Invite to ${target.name} copied`))
-              .catch(() => flash(`Invite code: ${code}`));
+            const link = `${window.location.origin}/channels/@me?invite=${code}`;
+            void copyText(link).then((ok) => {
+              if (ok) flash(`Invite to ${target.name} copied`);
+              else revealValue(`invite to ${target.name}`, link);
+            });
           }}
           onIgnore={() => {
             const id = actionTarget.user.id;

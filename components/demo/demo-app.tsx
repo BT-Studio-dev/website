@@ -12,6 +12,7 @@ import { useVoiceRoom } from "@/lib/use-voice-room";
 import { MemberList } from "@/components/member-list";
 import { Modal } from "@/components/modal";
 import { ProfileCard } from "@/components/profile/profile-card";
+import { copyText, revealValue } from "@/lib/clipboard";
 import { Avatar } from "@/components/avatar";
 import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
@@ -610,8 +611,10 @@ export function DemoApp({
                 onOpenProfile={() => setEditorOpen(true)}
                 onSwitchAccounts={() => setDialog("accounts")}
                 onCopyUserId={() => {
-                  void navigator.clipboard?.writeText(me.id).catch(() => undefined);
-                  flash("User ID copied");
+                  void copyText(me.id).then((ok) => {
+                    if (ok) flash("User ID copied");
+                    else revealValue("user ID", me.id);
+                  });
                 }}
                 muted={muted}
                 deafened={deafened}
@@ -842,8 +845,10 @@ export function DemoApp({
                   onOpenProfile={() => setEditorOpen(true)}
                   onSwitchAccounts={() => setDialog("accounts")}
                   onCopyUserId={() => {
-                    void navigator.clipboard?.writeText(me.id).catch(() => undefined);
-                    flash("User ID copied");
+                    void copyText(me.id).then((ok) => {
+                      if (ok) flash("User ID copied");
+                      else revealValue("user ID", me.id);
+                    });
                   }}
                   muted={muted}
                   deafened={deafened}
@@ -1394,10 +1399,10 @@ export function DemoApp({
           blocked={Boolean(blockedUsers[actionTarget.user.id])}
           onShareProfile={() => {
             const url = `${window.location.origin}/users/${actionTarget.user.id}`;
-            void navigator.clipboard
-              ?.writeText(url)
-              .then(() => flash("Profile link copied"))
-              .catch(() => flash(url));
+            void copyText(url).then((ok) => {
+              if (ok) flash("Profile link copied");
+              else revealValue("profile link", url);
+            });
             setActionTarget(null);
           }}
           onShopLook={() => {
@@ -1408,10 +1413,11 @@ export function DemoApp({
             const target = demoStore.servers.find((entry) => entry.id === serverId);
             setActionTarget(null);
             if (!target) return;
-            void navigator.clipboard
-              ?.writeText(`${window.location.origin}/channels/@me?invite=${target.invite_code}`)
-              .then(() => flash(`Invite to ${target.name} copied`))
-              .catch(() => flash(`Invite code: ${target.invite_code}`));
+            const link = `${window.location.origin}/channels/@me?invite=${target.invite_code}`;
+            void copyText(link).then((ok) => {
+              if (ok) flash(`Invite to ${target.name} copied`);
+              else revealValue(`invite to ${target.name}`, link);
+            });
           }}
           onIgnore={() => {
             const id = actionTarget.user.id;
@@ -1436,14 +1442,14 @@ export function DemoApp({
 
   async function copyInvite() {
     const url = `${window.location.origin}/channels?invite=${server.invite_code}`;
-    try {
-      await navigator.clipboard.writeText(url);
+    if (await copyText(url)) {
       setCopied(true);
       flash("Invite link copied");
       setTimeout(() => setCopied(false), 1600);
-    } catch {
-      flash(server.invite_code);
+      return;
     }
+    // Copying was blocked — show the full link so it can still be shared.
+    revealValue("invite link", url);
   }
 }
 

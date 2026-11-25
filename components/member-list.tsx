@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { CopyIcon, CheckIcon, CloseIcon, MoreIcon, SearchIcon } from "@/components/icons";
 import type { ServerMember, VoiceState } from "@/lib/types";
+import { copyText, revealValue } from "@/lib/clipboard";
 
 const roleLabel: Record<string, string> = {
   owner: "Owner",
@@ -57,13 +58,15 @@ export function MemberList({
   }, [voiceStates]);
 
   async function copyUsername(username: string, id: string) {
-    try {
-      await navigator.clipboard.writeText(`@${username}`);
+    const ok = await copyText(`@${username}`);
+    if (ok) {
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 1400);
-    } catch {
-      setCopiedId(null);
+      return;
     }
+    // Never leave the click with no visible effect: show the value instead.
+    setCopiedId(null);
+    revealValue("username", `@${username}`);
   }
 
   return (

@@ -153,6 +153,19 @@ genuinely needed. After nine seconds an amber panel offers **Retry** and **Open
 demo workspace**. Hitting Retry clears the timeout flag before re-running the
 load, so a stale timer can never undo the user's choice a moment later.
 
+### Clipboard
+
+Every copy control goes through `lib/clipboard.ts` and reports the outcome.
+
+`navigator.clipboard` is unavailable outside a secure context and can still be
+refused, so a bare `writeText()` inside `try {} catch {}` produces a button that
+does nothing: several used to flash "copied" without checking, and others reset
+their tick with no feedback at all. `copyText()` tries the modern API, falls back
+to the legacy selection trick, and returns whether the value actually landed.
+On failure the caller shows the value via `revealValue()` — a prompt with the
+full text — rather than claiming a copy that never happened. The demo suite
+fails the build if any component calls `navigator.clipboard` directly again.
+
 ### Activity cards
 
 `lib/activity.ts` turns a user's free-text `custom_status` back into a
