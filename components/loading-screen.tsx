@@ -66,7 +66,7 @@ export function LoadingScreen({
   return (
     <div className="ambient-stage grid h-dvh place-items-center px-6">
       <div className="flex w-full max-w-lg flex-col items-center text-center">
-        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-blurple-soft to-blurple text-white shadow-xl shadow-blurple/40">
+        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-blurple-soft to-blurple text-[color:var(--c-on-accent)] shadow-xl shadow-blurple/40">
           <BoltIcon width={26} height={26} strokeWidth={2.2} />
         </span>
 

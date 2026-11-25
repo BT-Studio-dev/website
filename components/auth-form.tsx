@@ -93,7 +93,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       <div className="relative w-full max-w-[420px]">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2.5">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blurple-soft to-blurple text-white shadow-lg shadow-blurple/30">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-blurple-soft to-blurple text-[color:var(--c-on-accent)] shadow-lg shadow-blurple/30">
             <BoltIcon width={20} height={20} strokeWidth={2.2} />
           </span>
           <span className="text-lg font-semibold tracking-tight">BT Comms</span>

@@ -39,7 +39,7 @@ export function CreateServerModal({
         onClick={() => onStart(null)}
         className="group flex w-full items-center gap-3 rounded-xl border border-line/70 bg-hover/45 p-3 text-left transition hover:border-blurple/50 hover:bg-hover/45"
       >
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blurple to-blurple-soft text-white">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-blurple to-blurple-soft text-[color:var(--c-on-accent)]">
           <PlusIcon width={20} height={20} />
         </span>
         <span className="min-w-0 flex-1">
@@ -432,7 +432,7 @@ export function OnboardingView({
 
       <div className="scroll-auto flex-1 overflow-y-auto px-6 py-10">
         <div className="mx-auto max-w-3xl text-center">
-          <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-blurple to-blurple-soft text-2xl text-white shadow-xl shadow-blurple/30">
+          <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-blurple to-blurple-soft text-2xl text-[color:var(--c-on-accent)] shadow-xl shadow-blurple/30">
             {initials}
           </span>
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-bright">

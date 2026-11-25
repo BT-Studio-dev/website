@@ -147,7 +147,7 @@ export function DmProfilePanel({
           {status !== "offline" && (
             <Card title="Playing a Game">
               <div className="flex items-start gap-2.5">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-blurple to-blurple-soft text-white">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-blurple to-blurple-soft text-[color:var(--c-on-accent)]">
                   <BoltMark />
                 </span>
                 <div className="min-w-0 flex-1">

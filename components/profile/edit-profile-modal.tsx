@@ -321,7 +321,7 @@ export function EditProfileModal({
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-line/60 px-5 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-blurple to-blurple-soft text-white">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-blurple to-blurple-soft text-[color:var(--c-on-accent)]">
             <PencilIcon width={15} height={15} />
           </span>
           <div className="min-w-0">
