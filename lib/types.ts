@@ -1,0 +1,520 @@
+export type Presence = "online" | "idle" | "dnd" | "invisible" | "offline";
+
+export type Profile = {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  accent_color: string;
+  status: Presence;
+  bio: string | null;
+  created_at: string;
+  /* v2 — persisted settings & custom status */
+  custom_status?: string | null;
+  custom_status_emoji?: string | null;
+  /** When `custom_status` was last set; null means unknown. */
+  custom_status_started_at?: string | null;
+  banner_color?: string | null;
+  theme_id?: ThemeId;
+  message_density?: Density;
+  reduce_motion?: boolean;
+  reduced_saturation?: boolean;
+  font_scale?: number;
+  dm_privacy?: "everyone" | "friends" | "none";
+  message_filter?: "off" | "standard" | "strict";
+  notify_direct_messages?: boolean;
+  notify_server_messages?: boolean;
+  notify_friend_requests?: boolean;
+  /* v3 — profile card customization */
+  banner_url?: string | null;
+  theme_primary?: string | null;
+  theme_secondary?: string | null;
+  avatar_decoration?: AvatarDecorationId;
+  profile_effect?: ProfileEffectId;
+  name_style?: NameStyleId;
+  nameplate?: NameplateId;
+  pronouns?: string | null;
+  server_tag?: string | null;
+  connections?: ProfileConnection[];
+  widgets?: ProfileWidget[];
+  user_settings?: UserSettings;
+  bt_pro?: boolean;
+  /** Full appearance blob (v5) — mirrors the localStorage cache. */
+  appearance?: Appearance | null;
+  /* v4 — timed presence + chat/voice prefs */
+  status_expires_at?: string | null;
+  icon_pack?: IconPackId;
+  chat_display?: ChatDisplaySettings;
+  voice_settings?: VoiceSettings;
+};
+
+export type Server = {
+  id: string;
+  name: string;
+  icon: string;
+  description: string | null;
+  invite_code: string;
+  is_default: boolean;
+  owner_id: string | null;
+};
+
+export type Channel = {
+  id: string;
+  server_id: string;
+  name: string;
+  kind: "text" | "voice";
+  topic: string | null;
+  position: number;
+};
+
+export type MessageAuthor = {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  accent_color: string | null;
+  status?: string | null;
+  custom_status?: string | null;
+  custom_status_emoji?: string | null;
+  /** When `custom_status` was last set; null means unknown. */
+  custom_status_started_at?: string | null;
+};
+
+/** A file uploaded to the `chat-attachments` bucket (v5). */
+export type Attachment = {
+  url: string;
+  name: string;
+  /** MIME type, e.g. `image/png`. */
+  type: string;
+  /** Bytes. */
+  size: number;
+};
+
+export type Message = {
+  id: string;
+  channel_id: string;
+  author_id: string | null;
+  system_author: string | null;
+  content: string;
+  created_at: string;
+  edited_at: string | null;
+  attachments?: Attachment[] | null;
+  author?: MessageAuthor | null;
+};
+
+export type ServerMember = {
+  server_id: string;
+  user_id: string;
+  role: "owner" | "admin" | "member";
+  joined_at: string;
+  profile?: Profile | null;
+};
+
+export type VoiceState = {
+  channel_id: string;
+  user_id: string;
+  muted: boolean;
+  joined_at: string;
+  profile?: MessageAuthor | null;
+};
+
+/* ------------------------------------------------------------------ */
+/* v2: friends, DMs, appearance                                        */
+/* ------------------------------------------------------------------ */
+
+export type CustomStatus = {
+  text: string | null;
+  emoji: string | null;
+};
+
+export type ThemeId =
+  | "ambient"
+  | "charcoal"
+  | "custom"
+  | "midnight"
+  | "amethyst"
+  | "aurora"
+  | "ember"
+  | "forest"
+  | "mono"
+  | "light";
+
+export type Density = "compact" | "cozy" | "roomy";
+
+export type Appearance = {
+  theme_id: ThemeId;
+  message_density: Density;
+  reduce_motion: boolean;
+  reduced_saturation: boolean;
+  font_scale: number;
+  /* v6 — accessibility (see lib/accessibility.ts) */
+  chat_font_size?: number;
+  underline_links?: boolean;
+  display_name_styles?: boolean;
+  ui_density?: UiDensity;
+  chat_display?: ChatMessageDisplay;
+  message_group_spacing?: number;
+  saturation?: number;
+  saturation_custom_colors?: boolean;
+  high_contrast?: boolean;
+  sync_contrast?: boolean;
+  role_colors?: RoleColorMode;
+  official_messages?: OfficialMessageMode;
+  show_on_off?: boolean;
+  reduce_motion_system?: boolean;
+  notification_duration?: number;
+  play_gifs_focused?: boolean;
+  play_animated_emoji?: boolean;
+  sticker_animations?: StickerAnimation;
+  tts_rate?: number;
+  show_image_descriptions?: boolean;
+  legacy_chat_input?: boolean;
+  /* v6 — language & time */
+  language?: string;
+  time_format?: TimeFormat;
+  /* v4 — custom gradient + icon pack + streamer mode */
+  gradient_from?: string;
+  gradient_to?: string;
+  icon_pack?: IconPackId;
+  streamer_mode?: boolean;
+  streamer_hide_personal?: boolean;
+  streamer_hide_invites?: boolean;
+  streamer_mute_sounds?: boolean;
+  search_scope?: "selected" | "all";
+};
+
+export type IconPackId = "classic" | "neo" | "soft" | "pixel" | "promo-summer" | "promo-space";
+
+/* v6 — Accessibility */
+
+/** Coarse UI density, distinct from the older per-row `message_density`. */
+export type UiDensity = "compact" | "default" | "spacious";
+
+/** Discord's "Chat Message Display" radio group. */
+export type ChatMessageDisplay = "default" | "compact";
+
+export type RoleColorMode = "names" | "dots" | "off";
+export type OfficialMessageMode = "text-color" | "no-text-color";
+export type StickerAnimation = "always" | "interaction" | "never";
+
+/* v6 — Language & time */
+
+export type TimeFormat = "auto" | "12h" | "24h";
+
+/** Chat-display preferences toggled in Appearance. */
+export type ChatDisplaySettings = {
+  showMedia?: boolean;
+  showEmbeds?: boolean;
+  showReactions?: boolean;
+  splitThreads?: boolean;
+  previewMarkup?: boolean;
+  emoticonToEmoji?: boolean;
+  showSendButton?: boolean;
+};
+
+/** Voice & video configuration, persisted per account/device. */
+export type VoiceSettings = {
+  inputDevice?: string;
+  outputDevice?: string;
+  cameraDevice?: string;
+  inputVolume?: number;
+  outputVolume?: number;
+  soundboardVolume?: number;
+  inputProfile?: "voice_isolation" | "studio" | "custom";
+  noiseSuppression?: "krisp" | "standard" | "off";
+  echoCancellation?: boolean;
+  automaticGain?: boolean;
+  pushToTalk?: boolean;
+  pushToTalkKey?: string;
+  showStreamPreviews?: boolean;
+  entranceSoundServer?: string;
+  entranceSound?: string;
+  callSounds?: Record<string, boolean>;
+};
+
+/** Presence menu durations, in milliseconds (null = forever). */
+export type StatusDuration =
+  | "15m"
+  | "1h"
+  | "8h"
+  | "24h"
+  | "3d"
+  | "forever";
+
+export const STATUS_DURATIONS: { id: StatusDuration; label: string; ms: number | null }[] = [
+  { id: "15m", label: "For 15 Minutes", ms: 15 * 60_000 },
+  { id: "1h", label: "For 1 Hour", ms: 60 * 60_000 },
+  { id: "8h", label: "For 8 Hours", ms: 8 * 60 * 60_000 },
+  { id: "24h", label: "For 24 Hours", ms: 24 * 60 * 60_000 },
+  { id: "3d", label: "For 3 Days", ms: 3 * 24 * 60 * 60_000 },
+  { id: "forever", label: "Forever", ms: null },
+];
+
+export type Friendship = {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: "pending" | "accepted" | "blocked";
+  created_at: string;
+  responded_at: string | null;
+  requester?: MessageAuthor | null;
+  addressee?: MessageAuthor | null;
+};
+
+export type DmChannel = {
+  id: string;
+  user_a: string;
+  user_b: string;
+  pair_key: string;
+  created_at: string;
+  last_message_at: string;
+  peer?: MessageAuthor | null;
+  last_message?: { content: string; created_at: string; author_id: string } | null;
+  unread_count?: number;
+};
+
+export type DirectMessage = {
+  id: string;
+  dm_channel_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  edited_at: string | null;
+  read_at: string | null;
+  attachments?: Attachment[] | null;
+  author?: MessageAuthor | null;
+};
+
+export type FriendRequest = {
+  id: string;
+  direction: "incoming" | "outgoing";
+  profile: MessageAuthor;
+  created_at: string;
+  /** Optional personal note the requester attached (max 120 chars). */
+  note?: string | null;
+};
+
+export type ActiveActivity = {
+  kind: "game" | "music" | "code" | "custom" | "voice";
+  title: string;
+  detail?: string;
+  started_at?: string;
+};
+
+/* ------------------------------------------------------------------ */
+/* v3: profile cards, widgets, user settings                            */
+/* ------------------------------------------------------------------ */
+
+export type AvatarDecorationId =
+  | "none"
+  | "aurora"
+  | "ember"
+  | "circuit"
+  | "bloom"
+  | "stars";
+
+export type ProfileEffectId = "none" | "sparkle" | "glow" | "confetti" | "snow";
+
+export type NameStyleId =
+  | "default"
+  | "neon"
+  | "gradient"
+  | "sunset"
+  | "outline"
+  | "serif"
+  | "mono";
+
+export type NameplateId = "none" | "glass" | "neon" | "gradient" | "sunset" | "grid";
+
+export type ConnectionKind =
+  | "roblox"
+  | "tiktok"
+  | "twitch"
+  | "youtube"
+  | "github"
+  | "spotify"
+  | "steam";
+
+export type ProfileConnection = {
+  id: string;
+  kind: ConnectionKind;
+  handle: string;
+  url: string;
+};
+
+export type WidgetKind = "favorite" | "like" | "want";
+
+export type WidgetGame = {
+  id: string;
+  name: string;
+  cover: string | null;
+  genre?: string | null;
+};
+
+export type ProfileWidget = {
+  id: string;
+  kind: WidgetKind;
+  game: WidgetGame;
+};
+
+export type SpamFilter = "all" | "non_friends" | "off";
+export type SensitiveFilter = "show" | "blur" | "block";
+export type ProfileShareScope = "friends_servers" | "friends_small_servers" | "friends";
+export type FriendRequestPolicy = "everyone" | "friends_of_friends" | "server_members" | "nobody";
+export type ReactionNotify = "all" | "dm" | "off";
+
+/** Everything on the Data & Privacy / Messaging / Notifications tabs. */
+export type UserSettings = {
+  /* Data & privacy */
+  dataImprove?: boolean;
+  dataPersonalize?: boolean;
+  voiceInClips?: boolean;
+  profileShareScope?: ProfileShareScope;
+  profileShareUpdates?: boolean;
+  /* Content & spam */
+  sensitiveDmFriends?: SensitiveFilter;
+  sensitiveDmOthers?: SensitiveFilter;
+  sensitiveServer?: SensitiveFilter;
+  spamFilter?: SpamFilter;
+  /* DMs & friend requests */
+  dmPrivacy?: "everyone" | "friends" | "none";
+  dmAllowServerMembers?: boolean;
+  dmRequests?: boolean;
+  friendRequestsEnabled?: boolean;
+  friendRequestsFrom?: FriendRequestPolicy;
+  friendRequestNotes?: boolean;
+  /* Notifications */
+  notifyDesktop?: boolean;
+  notifyStreaming?: boolean;
+  notifyFriendsOnline?: boolean;
+  notifyEvents?: boolean;
+  notifyProfileUpdates?: boolean;
+  notifyReactions?: ReactionNotify;
+  /* Sounds */
+  soundMessage?: boolean;
+  soundCurrentChannel?: boolean;
+  soundRing?: boolean;
+  soundDisabled?: boolean;
+  /* Badges & email */
+  unreadBadge?: boolean;
+  emailCommunication?: boolean;
+  emailSocial?: boolean;
+  emailAnnouncements?: boolean;
+  emailTips?: boolean;
+  emailRecommendations?: boolean;
+  /* Advanced */
+  ttsEnabled?: boolean;
+  ttsRate?: number;
+  advancedTelemetry?: boolean;
+  /* v4 — Appearance */
+  showMedia?: boolean;
+  showEmbeds?: boolean;
+  showReactions?: boolean;
+  splitThreads?: boolean;
+  previewMarkup?: boolean;
+  emoticonToEmoji?: boolean;
+  showSendButton?: boolean;
+  dmSearchScope?: "selected" | "all";
+  streamerMode?: boolean;
+  streamerHidePersonal?: boolean;
+  streamerHideInvites?: boolean;
+  streamerMuteSounds?: boolean;
+  iconPack?: IconPackId;
+  /* v4 — Voice & Video */
+  voiceInputDevice?: string;
+  voiceOutputDevice?: string;
+  voiceCameraDevice?: string;
+  voiceInputVolume?: number;
+  voiceOutputVolume?: number;
+  voiceSoundboardVolume?: number;
+  voiceInputProfile?: "voice_isolation" | "studio" | "custom";
+  noiseSuppression?: "krisp" | "standard" | "off";
+  echoCancellation?: boolean;
+  automaticGain?: boolean;
+  pushToTalk?: boolean;
+  pushToTalkKey?: string;
+  showStreamPreviews?: boolean;
+  entranceSoundServer?: string;
+  entranceSound?: string;
+  callSoundDeafen?: boolean;
+  callSoundMute?: boolean;
+  callSoundCamera?: boolean;
+  callSoundUndeafen?: boolean;
+  callSoundUnmute?: boolean;
+  lastStatus?: Presence;
+  lastStatusDuration?: StatusDuration;
+  /* v6 — Accessibility (mirrors lib/accessibility.ts) */
+  accessibility?: AccessibilitySettings;
+  /* v6 — Language & time */
+  language?: string;
+  timeFormat?: TimeFormat;
+};
+
+/** The accessibility blob persisted with `profiles.user_settings`. */
+export type AccessibilitySettings = {
+  chatFontSize?: number;
+  underlineLinks?: boolean;
+  displayNameStyles?: boolean;
+  uiDensity?: UiDensity;
+  chatDisplay?: ChatMessageDisplay;
+  groupSpacing?: number;
+  saturation?: number;
+  saturationCustomColors?: boolean;
+  highContrast?: boolean;
+  syncContrast?: boolean;
+  roleColors?: RoleColorMode;
+  officialMessages?: OfficialMessageMode;
+  showOnOff?: boolean;
+  reduceMotion?: boolean;
+  reduceMotionSystem?: boolean;
+  notificationDuration?: number;
+  playGifsFocused?: boolean;
+  playAnimatedEmoji?: boolean;
+  stickerAnimations?: StickerAnimation;
+  ttsRate?: number;
+  showImageDescriptions?: boolean;
+  legacyChatInput?: boolean;
+};
+
+export type BlockedUser = {
+  id: string;
+  blocked_id: string;
+  created_at: string;
+  profile: MessageAuthor | null;
+};
+
+/* ------------------------------------------------------------------ */
+/* v4: group DMs, accounts, server invites                             */
+/* ------------------------------------------------------------------ */
+
+export type GroupDm = {
+  id: string;
+  owner_id: string;
+  name: string | null;
+  icon_url: string | null;
+  created_at: string;
+  members: MessageAuthor[];
+  last_message_at: string;
+  last_message?: { content: string; created_at: string; author_id: string } | null;
+  unread_count?: number;
+};
+
+export type LinkedAccount = {
+  id: string;
+  email: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+  accent_color: string | null;
+  active: boolean;
+};
+
+export type ServerInvite = {
+  code: string;
+  server_id: string;
+  created_by: string | null;
+  created_at: string;
+  uses: number;
+  max_uses: number | null;
+  expires_at: string | null;
+};

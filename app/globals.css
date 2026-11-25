@@ -1,0 +1,568 @@
+@import "tailwindcss";
+
+@theme {
+  /* BT Comms palette — every value is driven by CSS variables so the
+     appearance settings can re-tint the whole app at runtime. */
+  --color-void: var(--c-void);
+  --color-abyss: var(--c-abyss);
+  --color-ink: var(--c-ink);
+  --color-panel: var(--c-panel);
+  --color-raised: var(--c-raised);
+  --color-hover: var(--c-hover);
+  --color-line: var(--c-line);
+  --color-muted: var(--c-muted);
+  --color-dim: var(--c-dim);
+  --color-bright: var(--c-bright);
+
+  /* Semantic surface tokens — prefer these over raw palette steps.
+     They resolve per-theme (see `:root` below) and stay themeable. */
+  --color-sidebar: var(--bg-sidebar);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-input: var(--bg-input);
+  --color-subtle: var(--border-subtle);
+  --color-strong: var(--text-primary);
+
+  --color-blurple: var(--c-accent);
+  --color-blurple-soft: var(--c-accent-soft);
+  --color-mint: var(--c-mint);
+  --color-amber: var(--c-amber);
+  --color-rose: var(--c-rose);
+
+  /* Readable foregrounds — see `readableForeground` in lib/themes.ts. */
+  --color-on-accent: var(--c-on-accent);
+  --color-on-mint: var(--c-on-mint);
+  --color-on-amber: var(--c-on-amber);
+  --color-on-rose: var(--c-on-rose);
+
+  --font-sans: "Inter Variable", "Inter", ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+:root {
+  /* Fallbacks so the first paint is themed before JS runs. */
+  --c-void: #0b0715;
+  --c-abyss: #100b1d;
+  --c-ink: #150f26;
+  --c-panel: #1a1330;
+  --c-raised: #241a3f;
+  --c-hover: #2f2350;
+  --c-line: #302450;
+  --c-muted: #a79ac4;
+  --c-dim: #7b6f96;
+  --c-bright: #f3f5fa;
+  --c-accent: #a855f7;
+  --c-accent-soft: #c084fc;
+  --c-mint: #3ba55d;
+  --c-amber: #faa61a;
+  --c-rose: #ed4245;
+  --c-glow: 168, 85, 247;
+  /* Foreground for filled accent/mint/amber/rose surfaces. The provider
+     recomputes these per theme; these defaults match the dark accents. */
+  --c-on-accent: #ffffff;
+  --c-on-accent-soft: #ffffff;
+  --c-on-mint: #ffffff;
+  --c-on-amber: #0a0a0c;
+  --c-on-rose: #ffffff;
+  --font-scale: 1;
+  --density-gap: 1;
+
+  /* ---- Semantic theme tokens -------------------------------------- */
+  /* One indirection layer: components ask for `--bg-surface`, never for a
+     hardcoded grey. The provider rewrites these on <html> when the user
+     picks a theme, so every pane re-tints at once. */
+  --bg-sidebar: var(--c-abyss);
+  --bg-surface: var(--c-ink);
+  --bg-elevated: var(--c-panel);
+  --bg-input: var(--c-void);
+  --border-subtle: var(--c-line);
+  --text-primary: var(--c-bright);
+  --text-muted: var(--c-muted);
+
+  /* Full-app wash. Ambient themes layer light pools on top of this. */
+  --bg-app-gradient: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--c-accent) 14%, var(--c-void)) 0%,
+    var(--c-void) 55%,
+    var(--c-abyss) 100%
+  );
+
+  /* Glass opacity knobs — raised for ambient themes so the gradient bleeds. */
+  --glass-sidebar: 0.72;
+  --glass-bar: 0.66;
+  --glass-blur: 18px;
+  --surface-noise: 0;
+}
+
+/* Ambient (2026 gradient) themes opt into stronger glass + a visible wash. */
+:root[data-ambient="true"] {
+  --glass-sidebar: 0.52;
+  --glass-bar: 0.46;
+  --glass-blur: 26px;
+  --surface-noise: 0.5;
+}
+
+:root[data-theme="light"] {
+  --glass-sidebar: 0.82;
+  --glass-bar: 0.82;
+  --surface-noise: 0;
+}
+
+@layer base {
+  * {
+    border-color: var(--c-line);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--c-void);
+    background-image: var(--bg-app-gradient);
+    background-attachment: fixed;
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: calc(1rem * var(--font-scale));
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+    /* Never let a stray wide child introduce a document scrollbar. */
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--c-accent) 45%, transparent);
+    color: #fff;
+  }
+
+  input,
+  textarea,
+  button {
+    font: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--c-dim);
+  }
+
+  /* Accessibility: saturation filter */
+  [data-saturation="reduced"] body {
+    filter: saturate(0.55);
+  }
+
+  /* Appearance: light theme readability fixes */
+  [data-theme="light"] .theme-invert {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
+@layer utilities {
+  /* Thin, low-contrast scrollbars that fade out until you hover the pane. */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--text-primary) 14%, transparent) transparent;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--text-primary) 14%, transparent);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--text-primary) 26%, transparent);
+  }
+
+  /* Auto-hiding variant: invisible until the pane is hovered or focused.
+     Used by message feeds, DM lists and modal bodies. */
+  .scroll-auto {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  .scroll-auto::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scroll-auto::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 160ms ease;
+  }
+  .scroll-auto:hover::-webkit-scrollbar-thumb,
+  .scroll-auto:focus-within::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--text-primary) 18%, transparent);
+  }
+  .scroll-auto:hover,
+  .scroll-auto:focus-within {
+    scrollbar-color: color-mix(in oklab, var(--text-primary) 18%, transparent) transparent;
+  }
+
+  /* Fully hidden track — for rail-style columns that scroll without a bar. */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  /* No visible track, but still scrollable (fallback for old browsers). */
+  .scroll-track-none {
+    scrollbar-color: color-mix(in oklab, var(--text-primary) 14%, transparent) transparent;
+  }
+  .scroll-track-none::-webkit-scrollbar-track {
+    background: transparent;
+    border: 0;
+  }
+
+  .surface {
+    background-color: var(--bg-elevated);
+  }
+
+  .glass {
+    background: color-mix(in oklab, var(--bg-elevated) 72%, transparent);
+    backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  }
+
+  /* Signature theme gradient used behind rails and headers. */
+  .app-gradient {
+    background-image: linear-gradient(
+      165deg,
+      color-mix(in oklab, var(--c-accent) 22%, var(--c-abyss)) 0%,
+      var(--c-abyss) 42%,
+      var(--c-void) 100%
+    );
+  }
+
+  /* The app shell wash: a single fixed gradient behind every pane. */
+  .shell-gradient {
+    background-image: var(--bg-app-gradient);
+    background-attachment: fixed;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 2026 ambient stage: three soft light pools behind translucent glass  */
+  /* ------------------------------------------------------------------ */
+  .ambient-stage {
+    position: relative;
+    isolation: isolate;
+    background-color: var(--c-void);
+  }
+
+  /* Painted by ::before so the gradient never scrolls with feed content. */
+  .ambient-stage::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      radial-gradient(58rem 40rem at 6% -8%, var(--ambient-1, rgba(168, 85, 247, 0.42)), transparent 68%),
+      radial-gradient(52rem 38rem at 96% 108%, var(--ambient-2, rgba(251, 146, 60, 0.24)), transparent 66%),
+      radial-gradient(70rem 50rem at 52% 46%, var(--ambient-3, rgba(16, 12, 26, 0.9)), transparent 78%),
+      linear-gradient(165deg, color-mix(in oklab, var(--c-accent) 12%, var(--c-void)), var(--c-void) 60%);
+  }
+
+  /* Slow-drifting aurora ribbons layered on top of the pools. */
+  .ambient-stage::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image:
+      conic-gradient(from 0deg at 30% 30%, transparent 0deg, var(--ambient-1, rgba(168,85,247,0.35)) 90deg, transparent 200deg),
+      conic-gradient(from 140deg at 74% 68%, transparent 0deg, var(--ambient-2, rgba(251,146,60,0.28)) 110deg, transparent 240deg);
+    filter: blur(70px) saturate(125%);
+    animation: ambientDrift 38s ease-in-out infinite alternate;
+  }
+
+  [data-motion="reduced"] .ambient-stage::after {
+    animation: none;
+  }
+
+  @keyframes ambientDrift {
+    from {
+      transform: translate3d(-2%, -1%, 0) rotate(-3deg) scale(1.02);
+    }
+    to {
+      transform: translate3d(3%, 2%, 0) rotate(4deg) scale(1.08);
+    }
+  }
+
+  /* Dark translucent glass used by sidebars, headers and input bars.
+     Opacity is driven by --glass-sidebar / --glass-bar so ambient themes
+     let more of the gradient through. */
+  .glass-panel {
+    background: color-mix(in oklab, var(--bg-sidebar) calc(var(--glass-sidebar) * 100%), transparent);
+    backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  }
+
+  .glass-bar {
+    background: color-mix(in oklab, var(--bg-surface) calc(var(--glass-bar) * 100%), transparent);
+    backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(145%);
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.8)) saturate(145%);
+    border-color: var(--border-subtle);
+  }
+
+  /* Floating pill composer. */
+  .composer-pill {
+    background: color-mix(in oklab, var(--bg-elevated) 90%, transparent);
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, var(--text-primary) 7%, transparent) inset,
+      0 18px 40px -22px rgba(0, 0, 0, 0.85);
+  }
+
+  .accent-gradient {
+    background-image: linear-gradient(
+      135deg,
+      var(--c-accent-soft) 0%,
+      var(--c-accent) 100%
+    );
+  }
+
+  .blurple-glow {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--c-accent) 40%, transparent),
+      0 18px 50px -18px rgba(var(--c-glow), 0.65);
+  }
+
+  .ambient-glow {
+    background: radial-gradient(
+      circle at center,
+      rgba(var(--c-glow), 0.35) 0%,
+      transparent 70%
+    );
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-rise {
+    animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-fade {
+    animation: fade 0.4s ease both;
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-spin-slow {
+    animation: spinSlow 7s linear infinite;
+  }
+
+  @keyframes spinSlow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* Message density variants (cozy is the default) */
+  [data-density="compact"] .density-row {
+    padding-top: 0.0625rem;
+    padding-bottom: 0.0625rem;
+  }
+  [data-density="cozy"] .density-row {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+  [data-density="roomy"] .density-row {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* User Settings → Accessibility                                       */
+  /*                                                                    */
+  /* Every knob writes a CSS variable or a data attribute on <html> via  */
+  /* applyAppearance(), so these rules are the only thing that has to    */
+  /* know how a preference becomes pixels.                              */
+  /* ------------------------------------------------------------------ */
+
+  /* Flush scrollbars: the feed's bar sits in the pane's own padding, so it
+     can never bleed under the profile panel next to it. */
+  .feed-scroll {
+    scrollbar-gutter: stable;
+    padding-inline-end: 0.5rem;
+    overscroll-behavior: contain;
+  }
+
+  /* Text size in chat (12px → 24px) and message grouping. */
+  .chat-text {
+    font-size: var(--chat-font-size, 16px);
+    line-height: 1.375;
+  }
+  .chat-text code,
+  .chat-text pre {
+    font-size: 0.88em;
+  }
+  .message-group {
+    margin-top: var(--message-group-gap, 12px);
+  }
+
+  /* Always underline links. */
+  [data-underline-links="true"] .chat-text a,
+  [data-underline-links="true"] .markdown-link {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Chat Message Display: compact collapses grouped rows. */
+  [data-chat-display="compact"] .density-row {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  [data-chat-display="compact"] .chat-avatar-gutter {
+    width: 0;
+  }
+
+  /* UI Density: rail + sidebar + panel padding. */
+  [data-ui-density="compact"] {
+    --ui-row-pad: 0.125rem;
+    --ui-section-pad: 0.375rem;
+  }
+  [data-ui-density="default"] {
+    --ui-row-pad: 0.25rem;
+    --ui-section-pad: 0.5rem;
+  }
+  [data-ui-density="spacious"] {
+    --ui-row-pad: 0.5rem;
+    --ui-section-pad: 0.75rem;
+  }
+  [data-ui-density] .ui-density-row {
+    padding-top: var(--ui-row-pad);
+    padding-bottom: var(--ui-row-pad);
+  }
+
+  /* Saturation slider (0–100%) + legacy binary toggle. */
+  [data-saturation="reduced"] body {
+    filter: saturate(0.55);
+  }
+  [data-saturation="custom"] body {
+    filter: saturate(var(--ui-saturation, 1));
+  }
+
+  /* High contrast: stronger borders and brighter muted copy. */
+  [data-high-contrast="true"] {
+    --border-subtle: color-mix(in oklab, var(--text-primary) 34%, transparent);
+    --text-muted: color-mix(in oklab, var(--text-primary) 88%, transparent);
+  }
+  [data-high-contrast="true"] .glass,
+  [data-high-contrast="true"] .glass-panel,
+  [data-high-contrast="true"] .composer-pill {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: var(--bg-elevated);
+  }
+
+  /* Show on/off indicators beside audio-style toggles. */
+  [data-show-on-off="true"] [data-toggle-state]::after {
+    content: attr(data-toggle-state);
+    margin-inline-start: 0.5rem;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Reduced motion / sticker & emoji animation policy. */
+  [data-motion="reduced"] *,
+  [data-motion="reduced"] *::before,
+  [data-motion="reduced"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  [data-stickers="never"] img[data-animated="true"],
+  [data-stickers="never"] video[data-sticker="true"],
+  [data-animated-emoji="false"] img[data-animated="true"] {
+    animation: none !important;
+  }
+}
+
+/* Reduced motion: honour both the OS setting and the in-app toggle */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+[data-motion="reduced"] *,
+[data-motion="reduced"] *::before,
+[data-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
