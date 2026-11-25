@@ -1407,7 +1407,8 @@ export function DemoApp({
           }}
           onShopLook={() => {
             setActionTarget(null);
-            flash("Shop This Look opens the outfit store — no items listed yet.");
+            setHomeTab("store");
+            flash("Perks & cosmetics are in the Store.");
           }}
           onInviteToServer={(serverId) => {
             const target = demoStore.servers.find((entry) => entry.id === serverId);

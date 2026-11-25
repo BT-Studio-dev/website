@@ -2016,8 +2016,11 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             setActionTarget(null);
           }}
           onShopLook={() => {
+            // The Store view exists and lists what a look actually needs, so
+            // take the user there instead of claiming nothing is listed.
             setActionTarget(null);
-            flash("Shop This Look opens the outfit store — no items listed yet.");
+            setHomeTab("store");
+            flash("Perks & cosmetics are in the Store.");
           }}
           onInviteToServer={(serverId) => {
             const target = servers.find((entry) => entry.id === serverId);
