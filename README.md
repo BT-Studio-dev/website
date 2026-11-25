@@ -141,6 +141,18 @@ device inherits it. `applyAppearance()` turns each preference into a CSS
 variable or `data-*` attribute on `<html>`, which is why ticking "Enable High
 Contrast Mode" repaints instantly.
 
+### Connection recovery
+
+`CommsLoader` wraps the whole bootstrap in a `try/catch`: a thrown fetch or a
+rejected promise used to escape with the phase still `"loading"`, which is how a
+visit could hang on the spinner indefinitely. Anything that throws now lands on
+the error screen with a real message.
+
+While the spinner is up there are always **Restart** and **Stop loading**
+controls. Stop hands the user the demo workspace immediately instead of making
+them wait out the nine-second timeout, and cancelling also suppresses the
+timeout's own fallback so the two can't fight.
+
 ### Search and user menus
 
 **Quick Switcher** (`Ctrl+K`, or the “Search …” box in a channel or DM header)

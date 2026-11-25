@@ -279,7 +279,7 @@ export async function framesLookFrozen(stream: MediaStream, delayMs = 700): Prom
     const canvas = document.createElement("canvas");
     canvas.width = 32;
     canvas.height = 18;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return null;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -292,10 +292,26 @@ export async function framesLookFrozen(stream: MediaStream, delayMs = 700): Prom
   video.srcObject = null;
 
   if (!first || !second) return false;
+
+  // A capture that is (almost) pure black carries no information either way:
+  // the surface may simply not have painted its first frame yet, or the window
+  // may be minimised. Treating that as "frozen" is what blurred a perfectly
+  // good share into a black rectangle. Only call it frozen when there is
+  // visible content that isn't changing.
+  let luminance = 0;
+  for (let i = 0; i < first.length; i += 4) {
+    luminance += 0.2126 * first[i] + 0.7152 * first[i + 1] + 0.0722 * first[i + 2];
+  }
+  const meanLuminance = luminance / (first.length / 4);
+  if (meanLuminance < 6) return false;
+
   let difference = 0;
   for (let i = 0; i < first.length; i += 4) {
     difference += Math.abs(first[i] - second[i]);
   }
   const average = difference / (first.length / 4);
-  return average < 0.5;
+
+  // Recursive mirroring shows up as *near*-zero drift. A busy window still
+  // moves a little even when nothing is typed, so the bar stays low.
+  return average < 0.15;
 }

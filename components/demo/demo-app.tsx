@@ -468,7 +468,11 @@ export function DemoApp({
                 ? "you're exploring an in-memory snapshot of the workspace."
                 : reason === "offline"
                   ? "Supabase isn't reachable from this browser, so you're exploring an in-memory snapshot."
-                  : "No Supabase project configured yet."}{" "}
+                  : reason === "cancelled"
+                    ? "you stopped the connection, so you're exploring an in-memory snapshot."
+                    : reason === "timeout"
+                      ? "the connection took too long, so you're exploring an in-memory snapshot."
+                      : "No Supabase project configured yet."}{" "}
               Messages are not persisted.
             </p>
             <a

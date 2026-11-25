@@ -31,13 +31,17 @@ const TIMEOUT_MS = 9000;
 export function LoadingScreen({
   onFallback,
   onRetry,
+  onCancel,
   label = "Connecting to BT Comms",
 }: {
   onFallback: () => void;
   onRetry?: () => void;
+  /** Stops waiting and leaves the spinner immediately. */
+  onCancel?: () => void;
   label?: string;
 }) {
   const [timedOut, setTimedOut] = useState(false);
+  const [cancelled, setCancelled] = useState(false);
   const [tip, setTip] = useState(0);
 
   // Random start so repeat visits don't always open on the same tip.
@@ -53,9 +57,11 @@ export function LoadingScreen({
     };
   }, [start]);
 
+  // Only auto-fall-back while the user is still waiting. Cancelling or hitting
+  // Retry must not be undone a moment later by this timer.
   useEffect(() => {
-    if (timedOut) onFallback();
-  }, [timedOut, onFallback]);
+    if (timedOut && !cancelled) onFallback();
+  }, [timedOut, cancelled, onFallback]);
 
   return (
     <div className="ambient-stage grid h-dvh place-items-center px-6">
@@ -92,6 +98,35 @@ export function LoadingScreen({
           ))}
         </div>
 
+        {!timedOut && (onCancel || onRetry) && (
+          <div className="mt-5 flex gap-2">
+            {onRetry && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTimedOut(false);
+                  onRetry();
+                }}
+                className="rounded-md bg-raised px-3 py-1.5 text-[12px] font-semibold text-bright ring-1 ring-line transition hover:bg-hover"
+              >
+                Restart
+              </button>
+            )}
+            {onCancel && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelled(true);
+                  onCancel();
+                }}
+                className="rounded-md px-3 py-1.5 text-[12px] font-semibold text-muted transition hover:text-bright"
+              >
+                Stop loading
+              </button>
+            )}
+          </div>
+        )}
+
         {timedOut && (
           <div className="mt-5 w-full rounded-xl border border-amber/30 bg-amber/10 p-3">
             <p className="text-[12px] font-semibold text-amber">Taking longer than usual…</p>
@@ -101,7 +136,11 @@ export function LoadingScreen({
             <div className="mt-2 flex justify-center gap-2">
               {onRetry && (
                 <button
-                  onClick={onRetry}
+                  type="button"
+                  onClick={() => {
+                    setTimedOut(false);
+                    onRetry();
+                  }}
                   className="rounded-md bg-raised px-3 py-1.5 text-[12px] font-semibold text-bright ring-1 ring-line transition hover:bg-hover"
                 >
                   Retry

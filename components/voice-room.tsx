@@ -174,6 +174,11 @@ export function VoiceRoomPanel({
 }) {
   const [prefs, setPrefs] = useState<VoicePreferences>(DEFAULT_PREFS);
   const [menuOpen, setMenuOpen] = useState(false);
+  // Local monitor blur: on when we are mirroring ourselves, off when the user
+  // says so. A frozen-frame guess can hint but only the label flips this.
+  const [blurOverride, setBlurOverride] = useState(false);
+  // "View live" — maximise one of the shared streams.
+  const [expanded, setExpanded] = useState<"local" | "remote" | null>(null);
   const [boardOpen, setBoardOpen] = useState(false);
   const menuAnchor = useRef<HTMLSpanElement>(null);
   const boardAnchor = useRef<HTMLSpanElement>(null);
@@ -205,6 +210,7 @@ export function VoiceRoomPanel({
   );
 
   const sharing = Boolean(screenOwnerId);
+  const blurLocal = Boolean(screenHint) && !blurOverride;
   const sharerName = (userId: string) =>
     occupants.find((o) => o.user_id === userId)?.profile?.display_name ??
     occupants.find((o) => o.user_id === userId)?.profile?.username ??
@@ -266,9 +272,12 @@ export function VoiceRoomPanel({
               label={`${sharerName(viewerId)} (you)`}
               muted
               wide={prefs.gridView}
-              // Blur our own monitor while we are the ones mirroring: that is
-              // what turns an infinite reflection into a soft gradient.
-              blurred={Boolean(screenHint)}
+              // Blur only when the *label* proved we picked our own surface.
+              // A frozen-frame guess must never black out a healthy stream:
+              // that is exactly how a good share went dark before.
+              blurred={blurLocal}
+              onToggleBlur={() => setBlurOverride((v) => !v)}
+              onExpand={() => setExpanded("local")}
             />
           )}
 
@@ -277,6 +286,7 @@ export function VoiceRoomPanel({
               stream={remoteVideo.stream}
               label={sharerName(remoteVideo.userId)}
               wide={prefs.gridView}
+              onExpand={() => setExpanded("remote")}
             />
           )}
 
@@ -331,6 +341,39 @@ export function VoiceRoomPanel({
           )}
         </div>
       </div>
+
+      {/* “View live” — the shared stream, full-bleed. */}
+      {expanded && (expanded === "local" ? localScreen : remoteVideo?.stream) && (
+        <div className="fixed inset-0 z-[140] flex flex-col bg-black">
+          <div className="flex shrink-0 items-center gap-2 bg-void/90 px-3 py-2">
+            <span className="flex items-center gap-1.5 rounded-full bg-rose px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-white">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+              LIVE
+            </span>
+            <p className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-bright">
+              {expanded === "local"
+                ? `${sharerName(viewerId)} (you)`
+                : remoteVideo
+                  ? sharerName(remoteVideo.userId)
+                  : ""}
+            </p>
+            <span className="rounded bg-hover/60 px-1.5 py-0.5 text-[10px] font-semibold text-dim">
+              720P 30FPS
+            </span>
+            <button
+              type="button"
+              onClick={() => setExpanded(null)}
+              className="rounded-md bg-hover/60 px-2.5 py-1 text-[11.5px] font-semibold text-bright transition hover:bg-hover"
+            >
+              Exit full screen
+            </button>
+          </div>
+          <BigVideo
+            stream={expanded === "local" ? (localScreen as MediaStream) : (remoteVideo!.stream)}
+            muted={expanded === "local"}
+          />
+        </div>
+      )}
 
       {/* ---------------------------- control bar --------------------------- */}
       <div className="glass-bar flex shrink-0 flex-wrap items-center justify-center gap-2 border-t px-3 py-3">
@@ -533,6 +576,29 @@ export function VoiceRoomPanel({
 
 /* -------------------------------- pieces -------------------------------- */
 
+/** Full-bleed playback for the "View live" overlay. */
+function BigVideo({ stream, muted }: { stream: MediaStream; muted: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    element.srcObject = stream;
+    void element.play().catch(() => undefined);
+    return () => {
+      element.srcObject = null;
+    };
+  }, [stream]);
+  return (
+    <video
+      ref={ref}
+      autoPlay
+      playsInline
+      muted={muted}
+      className="min-h-0 w-full flex-1 bg-black object-contain"
+    />
+  );
+}
+
 function MenuItem({
   label,
   checked,
@@ -568,6 +634,8 @@ function ScreenTile({
   muted = false,
   wide,
   blurred = false,
+  onToggleBlur,
+  onExpand,
 }: {
   stream: MediaStream;
   label: string;
@@ -575,6 +643,10 @@ function ScreenTile({
   wide?: boolean;
   /** Softens the local monitor while it is mirroring itself. */
   blurred?: boolean;
+  /** Lets the sharer un-blur their own preview. */
+  onToggleBlur?: () => void;
+  /** Opens the "View live" full-screen player. */
+  onExpand?: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -582,11 +654,19 @@ function ScreenTile({
     const element = videoRef.current;
     if (!element) return;
     element.srcObject = stream;
-    const play = () => {
-      void element.play().catch(() => undefined);
-    };
+    // A freshly created track can be muted/inactive for a moment; retrying on
+    // `canplay` is what stops a black rectangle that never starts painting.
+    const play = () => void element.play().catch(() => undefined);
     play();
+    element.addEventListener("loadedmetadata", play);
+    element.addEventListener("canplay", play);
+    const track = stream.getVideoTracks()[0];
+    const onUnmute = () => play();
+    track?.addEventListener("unmute", onUnmute);
     return () => {
+      element.removeEventListener("loadedmetadata", play);
+      element.removeEventListener("canplay", play);
+      track?.removeEventListener("unmute", onUnmute);
       element.srcObject = null;
     };
   }, [stream]);
@@ -618,6 +698,24 @@ function ScreenTile({
       <p className="absolute bottom-0 left-0 max-w-full truncate bg-gradient-to-t from-black/80 to-transparent px-2 pt-4 pb-1.5 text-[11.5px] font-semibold text-white">
         {label}
       </p>
+      {onExpand && (
+        <button
+          type="button"
+          onClick={onExpand}
+          className="absolute top-9 right-2 rounded-md bg-void/80 px-2 py-1 text-[10.5px] font-semibold text-bright ring-1 ring-line transition hover:bg-hover"
+        >
+          View live
+        </button>
+      )}
+      {blurred && onToggleBlur && (
+        <button
+          type="button"
+          onClick={onToggleBlur}
+          className="absolute right-2 bottom-2 rounded-md bg-void/80 px-2 py-1 text-[10.5px] font-semibold text-bright ring-1 ring-line transition hover:bg-hover"
+        >
+          Show preview
+        </button>
+      )}
     </div>
   );
 }

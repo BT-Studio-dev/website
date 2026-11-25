@@ -57,6 +57,7 @@ export function CommsLoader({
         return;
       }
 
+      try {
       // 1. Can this browser talk to Supabase at all?
       const reachable = await isSupabaseReachable(
         process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
@@ -163,6 +164,17 @@ export function CommsLoader({
       }
 
       setState({ phase: "joined", data: bundle });
+      } catch (error) {
+        // Without this the spinner could stay up forever: any thrown fetch or a
+        // rejected `await` bailed out of `load` with the state still "loading".
+        setState({
+          phase: "error",
+          message:
+            error instanceof Error && error.message
+              ? `We couldn't load your workspace: ${error.message}`
+              : "We couldn't load your workspace. Check your connection and try again.",
+        });
+      }
     },
     [supabase, router, serverId, channelId, dmId],
   );
@@ -206,7 +218,14 @@ export function CommsLoader({
         }}
         onRetry={() => {
           loadedFor.current = "";
+          setState({ phase: "loading" });
           void load();
+        }}
+        onCancel={() => {
+          // Stop waiting and hand the user something usable instead of a
+          // spinner they cannot dismiss.
+          setDemoReason("cancelled");
+          setDemo(true);
         }}
       />
     );
