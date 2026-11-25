@@ -39,7 +39,7 @@ export function ManageAccountsModal({
         <button
           onClick={onAddAccount}
           disabled={busy}
-          className="flex items-center gap-1.5 rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
         >
           <PlusIcon width={13} height={13} /> Add an account
         </button>

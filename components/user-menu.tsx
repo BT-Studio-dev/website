@@ -187,7 +187,7 @@ export function UserMenu({
                         ? setDurationFor((v) => (v === option.id ? null : option.id))
                         : (onSetStatus(option.id, "forever"), close())
                     }
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
                   >
                     <StatusIcon status={option.id} />
                     <span className="min-w-0 flex-1">
@@ -211,7 +211,7 @@ export function UserMenu({
                             onSetStatus(option.id, duration.id);
                             close();
                           }}
-                          className="block w-full px-2.5 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+                          className="block w-full px-2.5 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
                         >
                           {duration.label}
                         </button>

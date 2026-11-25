@@ -1151,7 +1151,7 @@ export function DemoApp({
                   flash(`Created #${result.channel.name}`);
                 }}
                 disabled={!channelName.trim()}
-                className="rounded-lg bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+                className="rounded-lg bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
               >
                 Create channel
               </button>
@@ -1219,7 +1219,7 @@ export function DemoApp({
               </code>
               <button
                 onClick={() => void copyInvite()}
-                className="flex shrink-0 items-center gap-1 rounded-md bg-blurple px-2.5 py-1 text-[11.5px] font-semibold text-white transition hover:bg-blurple-soft"
+                className="flex shrink-0 items-center gap-1 rounded-md bg-blurple px-2.5 py-1 text-[11.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
               >
                 {copied ? <CheckIcon width={12} height={12} /> : <CopyIcon width={12} height={12} />}
                 {copied ? "Copied" : "Copy"}
@@ -1291,7 +1291,7 @@ export function DemoApp({
                     setDialog(null);
                     flash(`Switched to ${candidate.name}`);
                   }}
-                  className="shrink-0 rounded-lg bg-blurple px-2.5 py-1.5 text-[11.5px] font-semibold text-white transition hover:bg-blurple-soft"
+                  className="shrink-0 rounded-lg bg-blurple px-2.5 py-1.5 text-[11.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
                 >
                   Open
                 </button>

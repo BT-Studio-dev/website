@@ -172,8 +172,8 @@ function RailItem({
       <span
         className={`relative grid h-12 w-12 place-items-center transition-all duration-200 ${
           active
-            ? "rounded-[16px] bg-blurple text-white shadow-lg"
-            : "rounded-[24px] bg-raised text-muted group-hover:rounded-[16px] group-hover:bg-blurple/90 group-hover:text-white"
+            ? "rounded-[16px] bg-blurple text-[color:var(--c-on-accent)] shadow-lg"
+            : "rounded-[24px] bg-raised text-muted group-hover:rounded-[16px] group-hover:bg-blurple/90 group-hover:text-[color:var(--c-on-accent)]"
         }`}
         style={active ? { boxShadow: "0 10px 26px -10px rgba(var(--c-glow),.8)" } : undefined}
       >
@@ -183,7 +183,7 @@ function RailItem({
           icon
         )}
         {badge > 0 && (
-          <span className="absolute -right-1 -bottom-1 grid min-w-[18px] place-items-center rounded-full border-2 border-abyss bg-rose px-1 text-[10px] font-bold text-white">
+          <span className="absolute -right-1 -bottom-1 grid min-w-[18px] place-items-center rounded-full border-2 border-abyss bg-rose px-1 text-[10px] font-bold text-[color:var(--c-on-rose)]">
             {badge > 99 ? "99+" : badge}
           </span>
         )}

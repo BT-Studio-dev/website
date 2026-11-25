@@ -242,7 +242,7 @@ export function CommsLoader({
               loadedFor.current = "";
               void load();
             }}
-            className="mt-5 rounded-lg bg-blurple px-4 py-2 text-sm font-semibold text-white transition hover:bg-blurple-soft"
+            className="mt-5 rounded-lg bg-blurple px-4 py-2 text-sm font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
           >
             Try again
           </button>
@@ -352,7 +352,7 @@ function EmptyWorkspace({
           <button
             onClick={() => void join()}
             disabled={busy || !code.trim()}
-            className="w-full rounded-lg bg-blurple py-2 text-[13px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+            className="w-full rounded-lg bg-blurple py-2 text-[13px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
           >
             Join server
           </button>

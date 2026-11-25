@@ -702,7 +702,7 @@ export function EditProfileModal({
               }
               actionSlot={
                 <div className="mb-1 flex gap-1.5">
-                  <button className="rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft">
+                  <button className="rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft">
                     Message
                   </button>
                   <button className="rounded-md bg-raised px-3 py-1.5 text-[12px] font-semibold text-bright ring-1 ring-line transition hover:bg-hover">
@@ -801,7 +801,7 @@ export function EditProfileModal({
             <button
               onClick={() => void onSave(draft, perServer)}
               disabled={saving}
-              className="flex items-center gap-1.5 rounded-lg bg-mint px-4 py-1.5 text-[12.5px] font-bold text-white transition hover:brightness-110 disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-lg bg-mint px-4 py-1.5 text-[12.5px] font-bold text-[color:var(--c-on-mint)] transition hover:brightness-110 disabled:opacity-50"
             >
               <CheckIcon width={13} height={13} />
               {saving ? "Saving…" : "Save Changes"}

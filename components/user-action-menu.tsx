@@ -247,10 +247,10 @@ function Row({
         nested ? "px-2.5 py-1 text-[12px]" : "px-2.5 py-1.5 text-[12.5px]"
       } ${
         danger
-          ? "text-rose hover:bg-rose hover:text-white"
+          ? "text-rose hover:bg-rose hover:text-[color:var(--c-on-rose)]"
           : active
-            ? "bg-blurple text-white"
-            : "text-muted hover:bg-blurple hover:text-white"
+            ? "bg-blurple text-[color:var(--c-on-accent)]"
+            : "text-muted hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
       }`}
     >
       <span className="min-w-0 flex-1 truncate">{children}</span>

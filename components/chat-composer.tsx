@@ -285,7 +285,7 @@ export function ChatComposer({
           fileRef.current?.click();
           setTray("none");
         }}
-        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
       >
         <UploadCloudIcon width={15} height={15} />
         Upload a File
@@ -297,7 +297,7 @@ export function ChatComposer({
           setTray("none");
           onCreateThread?.();
         }}
-        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
       >
         <ThreadIcon width={15} height={15} />
         Create Thread
@@ -308,7 +308,7 @@ export function ChatComposer({
           setTray("none");
           onUseApps?.();
         }}
-        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+        className="flex w-full items-center gap-2.5 px-2.5 py-2 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
       >
         <AppsIcon width={15} height={15} />
         Use Apps
@@ -446,7 +446,7 @@ export function ChatComposer({
               setValue((v) => `${v} 🎁 BT Pro (1 month)`.trim());
               setTray("none");
             }}
-            className="mt-2 w-full rounded-md bg-blurple py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
+            className="mt-2 w-full rounded-md bg-blurple py-1.5 text-[12px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
           >
             Add gift to message
           </button>
@@ -533,7 +533,7 @@ export function ChatComposer({
             title="Upload a file"
             className={`grid h-8 w-8 shrink-0 place-items-center rounded-full transition ${
               tray === "attach"
-                ? "bg-blurple text-white"
+                ? "bg-blurple text-[color:var(--c-on-accent)]"
                 : "bg-hover/55 text-muted hover:bg-hover/60 hover:text-bright"
             }`}
           >
@@ -632,7 +632,7 @@ export function ChatComposer({
               disabled={!canSend || busy}
               aria-label="Send message"
               title="Send message"
-              className="ml-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-blurple text-white transition hover:bg-blurple-soft disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-dim"
+              className="ml-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-blurple text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-dim"
             >
               <SendIcon width={15} height={15} />
             </button>
@@ -738,7 +738,7 @@ function PendingCard({
         onClick={onRemove}
         aria-label={`Remove ${attachment.name}`}
         title={`Remove ${attachment.name}`}
-        className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/70 text-white/90 transition hover:bg-rose hover:text-white focus:opacity-100 focus-visible:ring-2 focus-visible:ring-white/70 sm:opacity-0 sm:group-hover:opacity-100"
+        className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/70 text-white/90 transition hover:bg-rose hover:text-[color:var(--c-on-rose)] focus:opacity-100 focus-visible:ring-2 focus-visible:ring-white/70 sm:opacity-0 sm:group-hover:opacity-100"
       >
         <TrashIcon width={12} height={12} />
       </button>

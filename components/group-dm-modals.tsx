@@ -91,7 +91,7 @@ export function NewMessageModal({
                 reset();
               }}
               disabled={busy || selected.length < 2}
-              className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+              className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
             >
               {busy ? "Creating…" : "Create Group Message"}
             </button>
@@ -104,7 +104,7 @@ export function NewMessageModal({
                 }
               }}
               disabled={busy || selected.length === 0}
-              className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+              className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
             >
               Start Conversation
             </button>
@@ -250,7 +250,7 @@ export function ChangeIconModal({
               if (preview) onSave(preview);
             }}
             disabled={busy || !preview}
-            className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+            className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save Changes"}
           </button>

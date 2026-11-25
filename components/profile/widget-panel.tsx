@@ -88,7 +88,7 @@ export function WidgetPanel({
         <button
           onClick={() => setAdding(adding ? null : activeTab.kinds[0])}
           title="Add widget"
-          className="flex shrink-0 items-center gap-1 rounded-md bg-blurple px-2 py-1 text-[11.5px] font-semibold text-white transition hover:bg-blurple-soft"
+          className="flex shrink-0 items-center gap-1 rounded-md bg-blurple px-2 py-1 text-[11.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
         >
           <PlusIcon width={12} height={12} />
           Add Widget

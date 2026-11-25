@@ -148,7 +148,7 @@ export function LoadingScreen({
               )}
               <button
                 onClick={onFallback}
-                className="rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
+                className="rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
               >
                 Open demo workspace
               </button>

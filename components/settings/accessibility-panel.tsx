@@ -401,7 +401,7 @@ function AccessibilityPreview({ a11y }: { a11y: Required<AccessibilitySettings> 
           <button
             type="button"
             onClick={() => setClicks((n) => n + 1)}
-            className="rounded-md bg-blurple px-2.5 py-1 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
+            className="rounded-md bg-blurple px-2.5 py-1 text-[12px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
           >
             Example Button
             {clicks > 0 && <span className="ml-1.5 opacity-80">×{clicks}</span>}

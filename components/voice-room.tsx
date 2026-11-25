@@ -106,7 +106,7 @@ function ControlButton({
         danger
           ? "bg-rose/20 text-rose hover:bg-rose/30"
           : active
-            ? "bg-blurple text-white hover:brightness-110"
+            ? "bg-blurple text-[color:var(--c-on-accent)] hover:brightness-110"
             : "bg-hover/50 text-muted hover:bg-hover hover:text-bright"
       }`}
     >
@@ -346,7 +346,7 @@ export function VoiceRoomPanel({
       {expanded && (expanded === "local" ? localScreen : remoteVideo?.stream) && (
         <div className="fixed inset-0 z-[140] flex flex-col bg-black">
           <div className="flex shrink-0 items-center gap-2 bg-void/90 px-3 py-2">
-            <span className="flex items-center gap-1.5 rounded-full bg-rose px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-white">
+            <span className="flex items-center gap-1.5 rounded-full bg-rose px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-[color:var(--c-on-rose)]">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
               LIVE
             </span>
@@ -462,7 +462,7 @@ export function VoiceRoomPanel({
               setMenuOpen(false);
               onOpenSettings();
             }}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
           >
             <SettingsIcon width={14} height={14} />
             Voice &amp; Video Settings
@@ -614,7 +614,7 @@ function MenuItem({
       role="menuitemcheckbox"
       aria-checked={checked}
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+      className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
     >
       <span className="min-w-0 flex-1">{label}</span>
       {checked && <CheckIcon width={13} height={13} className="shrink-0 text-mint" />}
@@ -687,7 +687,7 @@ function ScreenTile({
         }`}
       />
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-2">
-        <span className="flex items-center gap-1.5 rounded-full bg-rose px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-white">
+        <span className="flex items-center gap-1.5 rounded-full bg-rose px-2 py-0.5 text-[10px] font-bold tracking-[0.1em] text-[color:var(--c-on-rose)]">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
           LIVE
         </span>

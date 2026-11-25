@@ -316,7 +316,7 @@ export function DmView({
                 {message.id === unreadFromId && (
                   <div className="my-4 flex items-center gap-2" role="separator" aria-label="New messages">
                     <span className="h-px flex-1 bg-rose/60" />
-                    <span className="rounded-full bg-rose px-2 py-0.5 text-[10px] font-bold tracking-[0.08em] text-white uppercase">
+                    <span className="rounded-full bg-rose px-2 py-0.5 text-[10px] font-bold tracking-[0.08em] text-[color:var(--c-on-rose)] uppercase">
                       New
                     </span>
                     <span className="h-px flex-1 bg-rose/60" />

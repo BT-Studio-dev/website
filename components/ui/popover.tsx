@@ -144,10 +144,10 @@ export function MenuItem({
 
   const toneClass =
     tone === "danger"
-      ? "text-rose hover:bg-rose hover:text-white"
+      ? "text-rose hover:bg-rose hover:text-[color:var(--c-on-rose)]"
       : tone === "accent"
-        ? "text-blurple-soft hover:bg-blurple hover:text-white"
-        : "text-muted hover:bg-blurple hover:text-white";
+        ? "text-blurple-soft hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
+        : "text-muted hover:bg-blurple hover:text-[color:var(--c-on-accent)]";
 
   function enter() {
     if (!submenu) return;
@@ -232,7 +232,7 @@ export function MenuCheckbox({
         e.stopPropagation();
         onChange(!checked);
       }}
-      className="flex w-full items-center gap-2 px-2.5 py-[7px] text-left text-[13px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+      className="flex w-full items-center gap-2 px-2.5 py-[7px] text-left text-[13px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
     >
       <span
         className={`grid h-3.5 w-3.5 shrink-0 place-items-center rounded-[3px] border transition ${

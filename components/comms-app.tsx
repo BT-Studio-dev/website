@@ -2140,7 +2140,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                     setViewedCard(null);
                     void openDm(id);
                   }}
-                  className="rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
+                  className="rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
                 >
                   Message
                 </button>
@@ -2263,7 +2263,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             <button
               onClick={() => void createChannel()}
               disabled={busy || !channelName.trim()}
-              className="rounded-lg bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+              className="rounded-lg bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
             >
               {busy ? "Creating…" : "Create channel"}
             </button>
@@ -2329,7 +2329,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             </code>
             <button
               onClick={() => void copyInvite()}
-              className="flex shrink-0 items-center gap-1 rounded-md bg-blurple px-2.5 py-1 text-[11.5px] font-semibold text-white transition hover:bg-blurple-soft"
+              className="flex shrink-0 items-center gap-1 rounded-md bg-blurple px-2.5 py-1 text-[11.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
             >
               {inviteCopied ? <CheckIcon width={12} height={12} /> : <CopyIcon width={12} height={12} />}
               {inviteCopied ? "Copied" : "Copy"}
@@ -2382,7 +2382,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 <button
                   onClick={() => void joinWithInvite(candidate.invite_code)}
                   disabled={already || busy}
-                  className="shrink-0 rounded-lg bg-blurple px-2.5 py-1.5 text-[11.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:bg-raised disabled:text-dim"
+                  className="shrink-0 rounded-lg bg-blurple px-2.5 py-1.5 text-[11.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:bg-raised disabled:text-dim"
                 >
                   {already ? "Joined" : "Join"}
                 </button>
@@ -2486,7 +2486,7 @@ function DiscoverView({
           </p>
           <button
             onClick={() => onJoin("bt-comms")}
-            className="mt-2 rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-blurple-soft"
+            className="mt-2 rounded-md bg-blurple px-3 py-1.5 text-[12px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
           >
             Join the official BT Comms server
           </button>

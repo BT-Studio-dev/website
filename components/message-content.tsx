@@ -67,7 +67,7 @@ function InlineBody({
                 builtin
                   ? "bg-amber/15 text-amber"
                   : mine
-                    ? "bg-blurple/25 text-white"
+                    ? "bg-blurple/25 text-[color:var(--c-on-accent)]"
                     : "bg-blurple/15 text-blurple-soft hover:bg-blurple/25"
               }`}
             >

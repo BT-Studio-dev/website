@@ -147,7 +147,7 @@ export function ServerWizardModal({
             </button>
             <button
               onClick={() => onNext(intent)}
-              className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft"
+              className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
             >
               Next
             </button>
@@ -218,7 +218,7 @@ export function ServerWizardModal({
           <button
             onClick={() => onFinish(name.trim() || defaultName, icon)}
             disabled={busy || !(name.trim() || defaultName)}
-            className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+            className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
           >
             {busy ? "Creating…" : "Create"}
           </button>
@@ -235,7 +235,7 @@ export function ServerWizardModal({
               <UploadIcon width={22} height={22} />
             )}
           </span>
-          <span className="absolute -right-1 -bottom-1 grid h-6 w-6 place-items-center rounded-full border-2 border-panel bg-blurple text-white">
+          <span className="absolute -right-1 -bottom-1 grid h-6 w-6 place-items-center rounded-full border-2 border-panel bg-blurple text-[color:var(--c-on-accent)]">
             <PlusIcon width={12} height={12} />
           </span>
           <input
@@ -327,7 +327,7 @@ export function JoinServerModal({
           <button
             onClick={() => onJoin(code)}
             disabled={busy || !code.trim()}
-            className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+            className="rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
           >
             {busy ? "Joining…" : "Join Server"}
           </button>

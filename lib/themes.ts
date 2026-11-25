@@ -349,3 +349,53 @@ export const DENSITY_LABELS: Record<Density, string> = {
   cozy: "Cozy",
   roomy: "Roomy",
 };
+
+
+/* ------------------------------------------------------------------ */
+/* Contrast                                                            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Relative luminance (WCAG) of a `#rgb` / `#rrggbb` colour, 0–1.
+ *
+ * Returns `null` for anything we can't parse (named colours, `color-mix()`,
+ * `oklch()`), so callers can fall back instead of guessing.
+ */
+export function relativeLuminance(color: string): number | null {
+  let hex = color.trim();
+  if (!hex.startsWith("#")) return null;
+  hex = hex.slice(1);
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((char) => char + char)
+      .join("");
+  }
+  if (hex.length !== 6 || /[^0-9a-f]/i.test(hex)) return null;
+  const channels = [0, 2, 4].map((offset) => {
+    const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+/**
+ * Which foreground reads on this background: near-black or near-white.
+ *
+ * A filled accent button that hardcodes `text-white` turns into invisible
+ * white-on-white the moment the theme's accent is light (Carbon Mono's is
+ * #e2e4e9). Everything that paints on the accent reads
+ * `text-[color:var(--c-on-accent)]` instead, and this decides the value.
+ */
+export function readableForeground(background: string, dark = "#0a0a0c", light = "#ffffff"): string {
+  const luminance = relativeLuminance(background);
+  if (luminance === null) return light;
+
+  // Pick whichever ink actually clears WCAG AA (4.5:1) for body text.
+  // Measured against relative luminance L either way:
+  //   white wins when (1.05) / (L + 0.05) >= 4.5   →  L <= 0.1833
+  //   black wins when (L + 0.05) / 0.05 >= 4.5     →  L >= 0.175
+  // The bands overlap, so a plain threshold at 0.179 picks the better of the
+  // two and never returns an unreadable pair for a real accent colour.
+  return luminance > 0.179 ? dark : light;
+}

@@ -217,7 +217,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blurple py-2.5 text-sm font-semibold text-white shadow-lg shadow-blurple/25 transition hover:bg-blurple-soft disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-blurple py-2.5 text-sm font-semibold text-[color:var(--c-on-accent)] shadow-lg shadow-blurple/25 transition hover:bg-blurple-soft disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <>

@@ -168,7 +168,7 @@ export function DmProfilePanel({
       <div className="shrink-0 border-t border-subtle p-3">
         <button
           onClick={onOpenProfile}
-          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-blurple py-2 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft"
+          className="flex w-full items-center justify-center gap-1.5 rounded-md bg-blurple py-2 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
         >
           <MessageBubbleIcon width={14} height={14} />
           View Full Profile

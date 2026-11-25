@@ -267,7 +267,7 @@ export function SettingsNav({
                       </span>
                       <span className="flex-1 text-left">{item.label}</span>
                       {item.id === "notifications" && pendingRequests > 0 && (
-                        <span className="rounded-full bg-rose px-1.5 text-[10px] font-bold text-white">
+                        <span className="rounded-full bg-rose px-1.5 text-[10px] font-bold text-[color:var(--c-on-rose)]">
                           {pendingRequests}
                         </span>
                       )}
@@ -320,7 +320,7 @@ function QuickLink({
       <span className="text-dim">{icon}</span>
       <span className="flex-1">{label}</span>
       {badge > 0 && (
-        <span className="rounded-full bg-rose px-1.5 text-[10px] font-bold text-white">
+        <span className="rounded-full bg-rose px-1.5 text-[10px] font-bold text-[color:var(--c-on-rose)]">
           {badge}
         </span>
       )}

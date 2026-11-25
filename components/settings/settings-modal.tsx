@@ -261,7 +261,7 @@ export function SettingsModal({
                   </p>
                   <button
                     onClick={() => onEditProfile?.()}
-                    className="mt-3 rounded-lg bg-blurple px-4 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft"
+                    className="mt-3 rounded-lg bg-blurple px-4 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
                   >
                     Open Edit Profile
                   </button>

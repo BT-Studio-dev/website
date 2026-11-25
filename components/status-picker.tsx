@@ -64,7 +64,7 @@ export function StatusPicker({
                   ? setDurationFor((v) => (v === option.id ? null : option.id))
                   : (onPick(option.id, "forever"), setOpen(false))
               }
-              className="flex w-full items-center gap-2 px-2.5 py-[7px] text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+              className="flex w-full items-center gap-2 px-2.5 py-[7px] text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
             >
               <StatusIcon status={option.id} />
               <span className="min-w-0 flex-1">
@@ -87,7 +87,7 @@ export function StatusPicker({
                       setOpen(false);
                       setDurationFor(null);
                     }}
-                    className="block w-full px-2.5 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-white"
+                    className="block w-full px-2.5 py-1.5 text-left text-[12.5px] font-medium text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
                   >
                     {duration.label}
                   </button>

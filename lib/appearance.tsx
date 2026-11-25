@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Appearance } from "@/lib/types";
-import { DEFAULT_APPEARANCE, themeById } from "@/lib/themes";
+import { DEFAULT_APPEARANCE, readableForeground, themeById } from "@/lib/themes";
 import type { ThemeDefinition } from "@/lib/themes";
 import { STORAGE_KEY, readStoredAppearance } from "@/lib/theme-boot";
 import {
@@ -52,6 +52,15 @@ export function applyAppearance(root: HTMLElement, appearance: Appearance) {
           "rgba(16,12,26,0.94)",
         ] as [string, string, string])
       : (theme.ambient ?? ["rgba(168,85,247,0.4)", "rgba(251,146,60,0.2)", "rgba(16,12,26,0.9)"]);
+
+  // Filled buttons paint `text-[color:var(--c-on-accent)]`, so a light accent
+  // (Carbon Mono) gets dark ink instead of invisible white-on-white.
+  const accent = theme.vars["--c-accent"] ?? "#5865f2";
+  root.style.setProperty("--c-on-accent", readableForeground(accent));
+  root.style.setProperty("--c-on-accent-soft", readableForeground(theme.vars["--c-accent-soft"] ?? accent));
+  root.style.setProperty("--c-on-mint", readableForeground(theme.vars["--c-mint"] ?? "#3ba55d"));
+  root.style.setProperty("--c-on-amber", readableForeground(theme.vars["--c-amber"] ?? "#faa61a"));
+  root.style.setProperty("--c-on-rose", readableForeground(theme.vars["--c-rose"] ?? "#ed4245"));
 
   root.style.setProperty("--ambient-1", ambient[0]);
   root.style.setProperty("--ambient-2", ambient[1]);

@@ -34,6 +34,20 @@ var themes=${JSON.stringify(Object.fromEntries(THEMES.map((t) => [t.id, t])))};
 var t=themes[a.theme_id]||themes.ambient;
 if(!t)return;
 for(var k in t.vars){r.style.setProperty(k,t.vars[k]);}
+/* Same ink rule as readableForeground() in themes.ts — keeps the first paint
+   from showing white-on-white before React mounts. */
+var lum=function(h){if(!h||h.charAt(0)!=="#")return null;h=h.slice(1);
+  if(h.length===3){h=h.charAt(0)+h.charAt(0)+h.charAt(1)+h.charAt(1)+h.charAt(2)+h.charAt(2);}
+  if(h.length!==6||/[^0-9a-f]/i.test(h))return null;
+  var v=[0,2,4].map(function(o){var c=parseInt(h.substr(o,2),16)/255;
+    return c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4);});
+  return 0.2126*v[0]+0.7152*v[1]+0.0722*v[2];};
+var ink=function(c){var l=lum(c);return l===null?"#ffffff":(l>0.179?"#0a0a0c":"#ffffff");};
+r.style.setProperty("--c-on-accent",ink(t.vars["--c-accent"]));
+r.style.setProperty("--c-on-accent-soft",ink(t.vars["--c-accent-soft"]));
+r.style.setProperty("--c-on-mint",ink(t.vars["--c-mint"]));
+r.style.setProperty("--c-on-amber",ink(t.vars["--c-amber"]));
+r.style.setProperty("--c-on-rose",ink(t.vars["--c-rose"]));
 var amb=t.ambient||[];
 if(t.id==="custom"&&a.gradient_from&&a.gradient_to){
   amb=[a.gradient_from+"88",a.gradient_to+"55","rgba(16,12,26,0.94)"];

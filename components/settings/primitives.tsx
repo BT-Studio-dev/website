@@ -62,10 +62,10 @@ type ButtonTone = "primary" | "secondary" | "danger" | "ghost" | "success";
 
 const TONES: Record<ButtonTone, string> = {
   primary:
-    "bg-blurple text-white hover:bg-blurple-soft shadow-sm shadow-blurple/30",
+    "bg-blurple text-[color:var(--c-on-accent)] hover:bg-blurple-soft shadow-sm shadow-blurple/30",
   secondary: "bg-raised text-bright hover:bg-hover border border-line",
   danger: "bg-rose/15 text-rose hover:bg-rose/25 border border-rose/30",
-  success: "bg-mint text-white hover:brightness-110",
+  success: "bg-mint text-[color:var(--c-on-mint)] hover:brightness-110",
   ghost: "text-muted hover:text-bright hover:bg-hover/60",
 };
 

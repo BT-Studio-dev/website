@@ -133,7 +133,7 @@ export function FriendsView({
                 {item.id === "pending" && pendingTotal > 0 && (
                   <span
                     title={`${pendingTotal} pending friend request${pendingTotal === 1 ? "" : "s"}`}
-                    className="ml-1.5 inline-block rounded-full bg-rose px-1.5 py-px align-middle text-[10px] leading-tight font-bold text-white"
+                    className="ml-1.5 inline-block rounded-full bg-rose px-1.5 py-px align-middle text-[10px] leading-tight font-bold text-[color:var(--c-on-rose)]"
                   >
                     {pendingTotal}
                   </span>
@@ -146,7 +146,7 @@ export function FriendsView({
               role="tab"
               className={`ml-0.5 shrink-0 rounded-md px-2 py-1 text-[13px] font-semibold whitespace-nowrap transition sm:px-2.5 ${
                 filter === "add"
-                  ? "bg-mint text-white"
+                  ? "bg-mint text-[color:var(--c-on-mint)]"
                   : "bg-mint/15 text-mint hover:bg-mint/25"
               }`}
             >
@@ -194,7 +194,7 @@ export function FriendsView({
                 <button
                   type="submit"
                   disabled={adding || !addValue.trim()}
-                  className="shrink-0 rounded-md bg-blurple px-3 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft disabled:opacity-50"
+                  className="shrink-0 rounded-md bg-blurple px-3 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft disabled:opacity-50"
                 >
                   {adding ? "Sending…" : "Send Friend Request"}
                 </button>
@@ -276,7 +276,7 @@ export function FriendsView({
                       type="button"
                       onClick={() => void onRespond(request.id, true)}
                       title="Accept friend request"
-                      className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mint px-2.5 text-[12px] font-semibold text-white transition hover:brightness-110"
+                      className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-mint px-2.5 text-[12px] font-semibold text-[color:var(--c-on-mint)] transition hover:brightness-110"
                     >
                       <CheckIcon width={14} height={14} />
                       <span className="hidden sm:inline">Accept</span>
@@ -349,7 +349,7 @@ export function FriendsView({
                           status={status}
                         />
                         {activity && (
-                          <span className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border-2 border-panel bg-blurple text-[8px] text-white">
+                          <span className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full border-2 border-panel bg-blurple text-[8px] text-[color:var(--c-on-accent)]">
                             {activity.kind === "music" ? "♪" : activity.kind === "code" ? "</>" : "▶"}
                           </span>
                         )}
@@ -393,7 +393,7 @@ export function FriendsView({
                               setMenuFor(null);
                               onOpenDm(friend.profile.id);
                             }}
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12.5px] text-muted transition hover:bg-blurple hover:text-white"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12.5px] text-muted transition hover:bg-blurple hover:text-[color:var(--c-on-accent)]"
                           >
                             <MessageBubbleIcon width={14} height={14} /> Message
                           </button>
@@ -402,7 +402,7 @@ export function FriendsView({
                               setMenuFor(null);
                               void onRemove(friend.profile.id);
                             }}
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12.5px] text-rose transition hover:bg-rose hover:text-white"
+                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12.5px] text-rose transition hover:bg-rose hover:text-[color:var(--c-on-rose)]"
                           >
                             <CloseIcon width={14} height={14} /> Remove Friend
                           </button>
@@ -505,7 +505,7 @@ function EmptyFriends({ filter, onAdd }: { filter: FriendFilter; onAdd: () => vo
       </p>
       <button
         onClick={onAdd}
-        className="mt-4 rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-white transition hover:bg-blurple-soft"
+        className="mt-4 rounded-md bg-blurple px-3.5 py-1.5 text-[12.5px] font-semibold text-[color:var(--c-on-accent)] transition hover:bg-blurple-soft"
       >
         Add Friend
       </button>

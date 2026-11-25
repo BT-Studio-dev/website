@@ -204,7 +204,7 @@ export function HomeSidebar({
                   </span>
                 </span>
                 {unread && (
-                  <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-rose px-1 text-[10px] font-bold text-white">
+                  <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-rose px-1 text-[10px] font-bold text-[color:var(--c-on-rose)]">
                     {group.unread_count}
                   </span>
                 )}
@@ -256,7 +256,7 @@ export function HomeSidebar({
                   </span>
                 </span>
                 {unread && (
-                  <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-rose px-1 text-[10px] font-bold text-white">
+                  <span className="grid h-4 min-w-4 shrink-0 place-items-center rounded-full bg-rose px-1 text-[10px] font-bold text-[color:var(--c-on-rose)]">
                     {dm.unread_count}
                   </span>
                 )}

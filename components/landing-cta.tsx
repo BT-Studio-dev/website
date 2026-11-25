@@ -31,7 +31,7 @@ export function LandingCta() {
       <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
         <Link
           href="/channels"
-          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blurple px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blurple/30 transition hover:-translate-y-0.5 hover:bg-blurple-soft sm:w-auto"
+          className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blurple px-6 py-3 text-sm font-semibold text-[color:var(--c-on-accent)] shadow-xl shadow-blurple/30 transition hover:-translate-y-0.5 hover:bg-blurple-soft sm:w-auto"
         >
           Open BT Comms
           <span className="transition group-hover:translate-x-0.5">→</span>
@@ -44,7 +44,7 @@ export function LandingCta() {
     <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
       <Link
         href="/signup"
-        className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blurple px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-blurple/30 transition hover:-translate-y-0.5 hover:bg-blurple-soft sm:w-auto"
+        className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blurple px-6 py-3 text-sm font-semibold text-[color:var(--c-on-accent)] shadow-xl shadow-blurple/30 transition hover:-translate-y-0.5 hover:bg-blurple-soft sm:w-auto"
       >
         Create your account
         <span className="transition group-hover:translate-x-0.5">→</span>
