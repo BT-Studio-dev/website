@@ -282,6 +282,22 @@ handles the OAuth/email-confirmation callback.
 | `dm:<dmChannelId>` | `postgres_changes` | `direct_messages` INSERT for the open conversation |
 | `social` | `postgres_changes` | `blocked_users` (alongside friendships and dm_channels) |
 
+### Theme contrast
+
+Filled controls never hardcode white text on an accent fill. `lib/themes.ts`
+exposes `relativeLuminance()` and `readableForeground()`, and every theme
+application sets `--c-on-accent`, `--c-on-accent-soft`, `--c-on-mint`,
+`--c-on-amber` and `--c-on-rose` to whichever of `#0a0a0c` / `#ffffff` clears
+WCAG AA against the underlying colour. Components use those tokens via
+`text-[color:var(--c-on-accent)]`.
+
+This matters because accent colours are user-selectable and not all of them are
+dark — the `mono` theme's accent is `#e2e4e9`. Without the token, every
+`bg-blurple text-white` button rendered as invisible white-on-white on that
+theme. `lib/theme-boot.ts` mirrors the same calculation inline so the first
+paint is correct before React hydrates, and the demo suite asserts that every
+shipped theme's accent clears 4.5:1 with its paired ink.
+
 ### Storage buckets
 
 | Bucket | Public | Limit | Written by |
