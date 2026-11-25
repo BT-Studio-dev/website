@@ -740,9 +740,12 @@ export const demoDms: DemoDm[] = [
 ];
 
 /**
- * Fixed "started" anchor for the demo activities. It is a real timestamp, so
- * the elapsed clock on a profile card reports genuine elapsed time, and it is
- * computed once at module load so it does not jump between renders.
+ * Demo activities carry a start time so the elapsed clock can be demonstrated.
+ *
+ * This is a fixture, not production data: in the live app the timestamp comes
+ * from `profiles.custom_status_started_at`, which a trigger stamps when the
+ * status changes. The demo has no such trigger, so the offset is set here and
+ * is computed once at module load so it doesn't drift between renders.
  */
 const ACTIVITY_STARTED_AT = new Date(Date.now() - 42 * 60 * 1000).toISOString();
 

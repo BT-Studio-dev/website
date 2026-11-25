@@ -11,7 +11,7 @@ import type {
 } from "@/lib/types";
 
 export const PROFILE_FIELDS =
-  "id, username, display_name, avatar_url, accent_color, status, bio, created_at, custom_status, custom_status_emoji, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests";
+  "id, username, display_name, avatar_url, accent_color, status, bio, created_at, custom_status, custom_status_emoji, custom_status_started_at, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests";
 
 export const MESSAGE_SELECT = `id, channel_id, author_id, system_author, content, created_at, edited_at,
   author:profiles(id, username, display_name, avatar_url, accent_color)`;

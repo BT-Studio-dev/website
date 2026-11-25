@@ -158,9 +158,21 @@ load, so a stale timer can never undo the user's choice a moment later.
 `lib/activity.ts` turns a user's free-text `custom_status` back into a
 structured activity (`Playing a Game`, `Listening to Spotify`, `Editing Code`,
 `Watching Something`). The DM profile panel renders that card only when the peer
-actually reports an activity — there is no placeholder text — and its elapsed
-clock is anchored to a real `started_at`, so it keeps counting across remounts
-instead of resetting. The card can be dismissed with the `×` in its heading.
+actually reports an activity — there is no placeholder text — and the card can be
+dismissed with the `×` in its heading.
+
+**Activities are never invented.** The first three online friends used to be
+handed a hardcoded title by position in the list, which put a "Playing a Game —
+Ranked · 2 of 5" card on profiles whose owner had set no such thing. Production
+now derives an activity only from what the user actually published; if nothing
+parses, the friend simply isn't listed under Active Now.
+
+The elapsed clock needs a real start time. `profiles.custom_status_started_at`
+is stamped by a trigger whenever `custom_status` genuinely changes (an unrelated
+profile save leaves it alone, and clearing the status clears the stamp), so a
+card reports true elapsed time. When the value is null — a status set before
+this was tracked — the card says "Active now" instead of showing a made-up
+duration. Demo fixtures set their own offset, since demo mode has no trigger.
 
 **Quick Switcher** (`Ctrl+K`, or the “Search …” box in a channel or DM header)
 opens one overlay over the live index of channels, voice channels, servers, DMs

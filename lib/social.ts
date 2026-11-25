@@ -18,14 +18,19 @@ import type { FriendRequest as FriendRequestType } from "@/lib/types";
 
 const AUTHOR_FIELDS = "id, username, display_name, avatar_url, accent_color";
 const PROFILE_FIELDS =
-  "id, username, display_name, avatar_url, accent_color, status, bio, custom_status, custom_status_emoji, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests, banner_url, theme_primary, theme_secondary, avatar_decoration, profile_effect, name_style, nameplate, pronouns, server_tag, connections, widgets, user_settings, bt_pro, appearance, created_at";
+  "id, username, display_name, avatar_url, accent_color, status, bio, custom_status, custom_status_emoji, custom_status_started_at, banner_color, theme_id, message_density, reduce_motion, reduced_saturation, font_scale, dm_privacy, message_filter, notify_direct_messages, notify_server_messages, notify_friend_requests, banner_url, theme_primary, theme_secondary, avatar_decoration, profile_effect, name_style, nameplate, pronouns, server_tag, connections, widgets, user_settings, bt_pro, appearance, created_at";
 
 export { PROFILE_FIELDS };
 export type { FriendRequestType as FriendRequest };
 
 export type FriendEntry = {
   friendshipId: string;
-  profile: MessageAuthor & { status?: string; custom_status?: string | null; custom_status_emoji?: string | null };
+  profile: MessageAuthor & {
+    status?: string;
+    custom_status?: string | null;
+    custom_status_emoji?: string | null;
+    custom_status_started_at?: string | null;
+  };
   since: string;
 };
 
@@ -214,8 +219,8 @@ export async function fetchDmChannels(supabase: SupabaseClient): Promise<DmChann
     .from("dm_channels")
     .select(
       `id, user_a, user_b, pair_key, created_at, last_message_at,
-       a:profiles!dm_channels_user_a_fkey(${AUTHOR_FIELDS}, custom_status, custom_status_emoji, status),
-       b:profiles!dm_channels_user_b_fkey(${AUTHOR_FIELDS}, custom_status, custom_status_emoji, status)`,
+       a:profiles!dm_channels_user_a_fkey(${AUTHOR_FIELDS}, custom_status, custom_status_emoji, custom_status_started_at, status),
+       b:profiles!dm_channels_user_b_fkey(${AUTHOR_FIELDS}, custom_status, custom_status_emoji, custom_status_started_at, status)`,
     )
     .or(`user_a.eq.${me},user_b.eq.${me}`)
     .order("last_message_at", { ascending: false });
@@ -334,6 +339,7 @@ export type ProfilePatch = Partial<
     | "banner_color"
     | "custom_status"
     | "custom_status_emoji"
+    | "custom_status_started_at"
     | "theme_id"
     | "message_density"
     | "reduce_motion"
@@ -557,6 +563,7 @@ export async function saveProfileCard(
     widgets?: ProfileWidget[];
     custom_status?: string | null;
     custom_status_emoji?: string | null;
+    custom_status_started_at?: string | null;
   },
 ) {
   return updateProfile(supabase, userId, patch as ProfilePatch);

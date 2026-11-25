@@ -12,6 +12,8 @@ export type Profile = {
   /* v2 — persisted settings & custom status */
   custom_status?: string | null;
   custom_status_emoji?: string | null;
+  /** When `custom_status` was last set; null means unknown. */
+  custom_status_started_at?: string | null;
   banner_color?: string | null;
   theme_id?: ThemeId;
   message_density?: Density;
@@ -74,6 +76,8 @@ export type MessageAuthor = {
   status?: string | null;
   custom_status?: string | null;
   custom_status_emoji?: string | null;
+  /** When `custom_status` was last set; null means unknown. */
+  custom_status_started_at?: string | null;
 };
 
 /** A file uploaded to the `chat-attachments` bucket (v5). */

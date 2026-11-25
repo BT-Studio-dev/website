@@ -23,6 +23,7 @@ export function DmProfilePanel({
 }: {
   peer: MessageAuthor & {
     custom_status?: string | null;
+    custom_status_started_at?: string | null;
     status?: string;
     status_expires_at?: string | null;
     pronouns?: string | null;
@@ -47,10 +48,23 @@ export function DmProfilePanel({
    * Prefer the activity the caller resolved; otherwise read it straight off the
    * peer's status. Never invent one — an absent activity renders no card.
    */
+  const parsed = activityFromStatus(peer.custom_status);
   const resolved = activity
     ? { activity, label: activityLabel(activity.kind) }
-    : activityFromStatus(peer.custom_status);
-  const current = resolved?.activity ?? null;
+    : parsed
+      ? { activity: parsed.activity, label: parsed.label }
+      : null;
+  /**
+   * The card's start time: prefer whatever the caller resolved, then the
+   * database stamp. Both can be missing (no activity, or a status set before
+   * this was tracked), in which case the clock is hidden rather than faked.
+   */
+  const current = resolved
+    ? {
+        ...resolved.activity,
+        started_at: resolved.activity.started_at ?? peer.custom_status_started_at ?? undefined,
+      }
+    : null;
 
   // The elapsed clock is anchored to the real start time, so it survives a
   // panel remount and never restarts from zero while the user watches.
@@ -184,10 +198,15 @@ export function DmProfilePanel({
                   {current.detail && (
                     <p className="truncate text-[11px] text-dim">{current.detail}</p>
                   )}
-                  {elapsed !== null && (
+                  {elapsed !== null ? (
                     <p className="mt-0.5 font-mono text-[11px] tabular-nums text-mint">
                       {formatElapsed(elapsed)} elapsed
                     </p>
+                  ) : (
+                    // No stamp (status set before we tracked start times, or a
+                    // caller that didn't supply one): say nothing rather than
+                    // showing a made-up duration.
+                    <p className="mt-0.5 text-[11px] text-dim">Active now</p>
                   )}
                 </div>
               </div>

@@ -92,6 +92,7 @@ import type {
   VoiceState,
 } from "@/lib/types";
 import type { ServerIntent, ServerTemplate } from "@/lib/server-templates";
+import { activityFromStatus } from "@/lib/activity";
 import type { SettingsSectionId } from "@/components/settings/settings-nav";
 
 type LegacyDialog = Extract<NewDialog, "invite" | "profile" | "channel" | "explore">;
@@ -182,9 +183,6 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const router = useRouter();
   const { appearance } = useAppearance();
   const persistedAppearance = useRef<string>("");
-  /* One fixed "activity started" timestamp per session, so profile cards show
-     real elapsed time instead of a value that resets on every render. */
-  const activityAnchor = useRef(new Date(Date.now() - 42 * 60 * 1000).toISOString());
   // Mirror of the latest `profiles.user_settings`; the appearance debounce merges
   // into it so saving a theme never wipes a Notifications toggle.
   const settingsRef = useRef<Record<string, unknown>>(
@@ -1374,21 +1372,28 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const pendingCount = incoming.length;
   const onlineFriends = friends.filter((f) => (f.profile.status ?? "offline") !== "offline");
 
-  // Synthetic "Active Now" activities derived from friends' status.
+  /**
+   * "Active Now" activities, derived from what each friend actually published.
+   *
+   * This used to invent them: the first three online friends were handed
+   * "BT Comms Arena", "Lo-fi Beats to Ship To" and "bt-comms/app" by list
+   * position, regardless of what they had set. That put a fake "Playing a Game
+   * — Ranked · 2 of 5" card on real profiles. Now a friend only appears when
+   * their own custom status parses as an activity.
+   */
   const activities = useMemo(() => {
     const map: Record<string, ActiveActivity> = {};
-    // A fixed anchor for the session, so the elapsed clock on a profile card
-    // reports real elapsed time and doesn't reset on every re-render.
-    const anchor = activityAnchor.current;
-    const titles = [
-      { kind: "game" as const, title: "BT Comms Arena", detail: "Ranked · 2 of 5", started_at: anchor },
-      { kind: "music" as const, title: "Lo-fi Beats to Ship To", detail: "Spotify · playlist", started_at: anchor },
-      { kind: "code" as const, title: "bt-comms/app", detail: "Editing components/settings", started_at: anchor },
-      { kind: "voice" as const, title: "General Voice", detail: "In a voice channel", started_at: anchor },
-    ];
-    onlineFriends.forEach((friend, index) => {
-      if (index < 3) map[friend.profile.id] = titles[index % titles.length];
-    });
+    for (const friend of onlineFriends) {
+      const parsed = activityFromStatus(friend.profile.custom_status);
+      if (!parsed) continue;
+      map[friend.profile.id] = {
+        ...parsed.activity,
+        // The database stamps this when the status changes. Null means we don't
+        // know when it started, so the card hides the clock rather than
+        // inventing one.
+        started_at: friend.profile.custom_status_started_at ?? undefined,
+      };
+    }
     return map;
   }, [onlineFriends]);
 
