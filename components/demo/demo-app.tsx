@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ServerRail } from "@/components/server-rail";
 import { ChannelSidebar } from "@/components/channel-sidebar";
 import { DemoMessageFeed } from "@/components/demo/demo-message-feed";
+import { VoiceRoomPanel } from "@/components/voice-room";
+import { useGlobalKeybinds } from "@/lib/use-keybinds";
+import { useVoiceRoom } from "@/lib/use-voice-room";
 import { MemberList } from "@/components/member-list";
 import { Modal } from "@/components/modal";
 import { Avatar } from "@/components/avatar";
@@ -131,6 +134,8 @@ export function DemoApp({
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [homeFilter, setHomeFilter] = useState("");
   const [demoMuted, setDemoMuted] = useState<Record<string, boolean>>({});
+  const [voiceRoomId, setVoiceRoomId] = useState<string | null>(null);
+  const [boardSignal, setBoardSignal] = useState(0);
   const toggleDemoMute = useCallback((id: string) => {
     setDemoMuted((prev) => ({ ...prev, [id]: !prev[id] }));
   }, []);
@@ -142,6 +147,38 @@ export function DemoApp({
   const [groupIconTarget, setGroupIconTarget] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
+  const demoVoice = useVoiceRoom({ supabase: null, channelId: voiceRoomId, selfId: DEMO_USER_ID });
+
+  useGlobalKeybinds(
+    {
+      "toggle-soundboard": () => {
+        if (!voiceRoomId) {
+          flash("Join a voice channel to use the soundboard.");
+          return;
+        }
+        setBoardSignal((n) => n + 1);
+      },
+      "toggle-mute": () => {
+        setMuted((prev) => {
+          if (prev) return false;
+          setDeafened(false);
+          return true;
+        });
+      },
+      "toggle-deafen": () => {
+        setDeafened((prev) => {
+          const next = !prev;
+          if (next) setMuted(true);
+          return next;
+        });
+      },
+    },
+    true,
+  );
+
+  useEffect(() => {
+    demoVoice.setMuted(muted || deafened);
+  }, [muted, deafened, demoVoice.setMuted]);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>(undefined);
 
   const [activeServerId, setActiveServerId] = useState(
@@ -603,14 +640,17 @@ export function DemoApp({
                   canManage={canManage}
                   onSelectChannel={selectChannel}
                   onSelectVoice={(id) => {
-                    setActiveChannelId(id);
+                    demoStore.joinVoice(id);
+                    setVoiceRoomId(id);
                   }}
                   onOpenSettings={() => setSettingsOpen(true)}
                   onJoinVoice={(id) => {
                     demoStore.joinVoice(id);
+                    setVoiceRoomId(id);
                     flash(`Joined ${channels.find((c) => c.id === id)?.name ?? "voice"}`);
                   }}
                   onLeaveVoice={() => {
+                    setVoiceRoomId(null);
                     demoStore.leaveVoice();
                     flash("Left voice");
                   }}
@@ -705,7 +745,50 @@ export function DemoApp({
                 />
               )}
 
-              {activeChannel && onboardingServerId !== activeServerId && (
+              {voiceRoomId && (
+                <VoiceRoomPanel
+                  channelName={channels.find((c) => c.id === voiceRoomId)?.name ?? "Voice channel"}
+                  occupants={voiceStates.filter((v) => v.channel_id === voiceRoomId)}
+                  viewerId={DEMO_USER_ID}
+                  muted={muted}
+                  deafened={deafened}
+                  onToggleMute={() => setMuted((v) => !v)}
+                  onToggleDeafen={() => {
+                    setDeafened((v) => !v);
+                    if (!deafened) setMuted(true);
+                  }}
+                  onLeave={() => {
+                    setVoiceRoomId(null);
+                    demoStore.leaveVoice();
+                    flash("Left voice");
+                  }}
+                  onOpenSettings={() => {
+                    setSettingsSection("voice");
+                    setSettingsOpen(true);
+                  }}
+                  onFlash={flash}
+                  soundboardVolume={me.user_settings?.voiceSoundboardVolume ?? 65}
+                  isPro={Boolean(me.bt_pro)}
+                  localScreen={demoVoice.screenStream}
+                  screenOwnerId={demoVoice.screenOwnerId}
+                  screenHint={demoVoice.screenHint}
+                  onStartScreen={async () => {
+                    const result = await demoVoice.startScreen();
+                    if (!result.ok) flash(result.message);
+                  }}
+                  onStopScreen={demoVoice.stopScreen}
+                  remoteVideo={demoVoice.remoteVideo}
+                  cameraOn={Boolean(demoVoice.cameraStream)}
+                  onToggleCamera={async () => {
+                    const result = await demoVoice.toggleCamera();
+                    if (!result.ok) flash(result.message);
+                  }}
+                  onOpenMembers={() => setShowMembers((v) => !v)}
+                  openBoardSignal={boardSignal}
+                />
+              )}
+
+              {activeChannel && !voiceRoomId && onboardingServerId !== activeServerId && (
                 <DemoMessageFeed
                   key={activeChannel.id}
                   server={server}

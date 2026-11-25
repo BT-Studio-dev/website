@@ -72,7 +72,7 @@ becomes your avatar tint everywhere.
 | **Composer** | Same floating pill as DMs (attachments, mentions, slash commands, emoji/GIF/sticker), `Enter` or `→` at end-of-line sends, `Shift+Enter` newline, typing broadcast |
 | **Member list** | Online/Offline grouping, owner → admin → member ordering, presence dots, accent-tinted avatars, copy-username, “in voice” badges |
 | **User panel** | Glass bar; avatar opens the **profile quick-action popover** (mini card, status row with a nested **timed status** flyout — 15 min → Forever —, **10,130 Orbs**, Switch Accounts, Copy User ID), and the mic / headphone chevrons open **device pickers** with input & output volume sliders and a Voice Settings link. Also hosts the Manage Accounts modal |
-| **Voice** | Join/leave voice channels, persisted occupant list, muted state, “Voice connected” card |
+| **Voice** | Join/leave voice channels, persisted occupant list, muted state, “Voice connected” card, and a full **voice room** view — participant grid (toggle Grid View), live camera, **screen share / Go Live** with a `LIVE · 720P 30FPS` overlay, a synthesized **soundboard** (Creeper, hrrh, pake, npc background, hmm, mlom, door … with a **Get Nitro** bar for premium sounds), and a `…` menu for *Grid View*, *Show Non-Video Participants*, *Show New Message Previews* and *Voice & Video Settings* |
 | **Presence** | Status picker (online / idle / do not disturb / offline); auto-idles on tab blur, offline on unload |
 
 ### Attachments (channels, DMs and group DMs)
@@ -140,6 +140,29 @@ choice paints before the network responds, and
 device inherits it. `applyAppearance()` turns each preference into a CSS
 variable or `data-*` attribute on `<html>`, which is why ticking "Enable High
 Contrast Mode" repaints instantly.
+
+### Voice media plane
+
+Joining a voice channel opens a `voice:<channelId>` realtime topic that carries
+the WebRTC signalling: peer presence (`{ user_id }`), SDP offers and answers, and
+trickled ICE candidates. `voice_states` in Postgres stays the roster of record;
+the topic only moves media handshakes.
+
+The topology is a full mesh — each participant connects to every other one —
+which is the right shape for a channel-sized call and needs no media server.
+The peer whose user id sorts lower always writes the offer, so two people
+joining at the same instant can't collide. Microphone capture is
+echo-cancelled; a denied mic permission downgrades to listen-and-share instead
+of failing the join.
+
+**Screen sharing** asks Chrome for `displaySurface: "window"` so the picker
+defaults to an application window rather than the whole desktop. Because the
+platform intentionally offers no API for "is this capture me?", self-mirroring
+is detected from the track label (our document title or product name in the
+label, or a browser surface with no other app named) *and* from a frozen-frame
+sample of the first ~700 ms. Either signal shows the banner *"You are sharing
+this window/tab. Switch to an application window to avoid mirroring."* and blurs
+the local monitor so a recursive reflection can't run away.
 
 ### Keyboard shortcuts
 
@@ -221,6 +244,7 @@ handles the OAuth/email-confirmation callback.
 | --- | --- | --- |
 | `messages:<channelId>` | `postgres_changes` | INSERT / UPDATE / DELETE on `messages` for the open channel |
 | `typing:<channelId>` | `broadcast` | Ephemeral “is typing…” signal (no DB writes) |
+| `voice:<channelId>` | `broadcast` + `presence` | SDP offers/answers, ICE candidates, `{ user_id }` presence |
 | `server:<serverId>` | `postgres_changes` | `server_members`, `profiles` (presence/name), `voice_states` |
 | `social` | `postgres_changes` | `friendships`, `dm_channels`, `profiles` (presence/name) |
 | `dm:<dmChannelId>` | `postgres_changes` | `direct_messages` INSERT for the open conversation |

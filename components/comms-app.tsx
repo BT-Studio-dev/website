@@ -17,6 +17,9 @@ import { Modal } from "@/components/modal";
 import { Avatar } from "@/components/avatar";
 import { HomeSidebar, type HomeTab } from "@/components/home-sidebar";
 import { FriendsView, ActiveNowPanel } from "@/components/friends-view";
+import { VoiceRoomPanel } from "@/components/voice-room";
+import { useVoiceRoom } from "@/lib/use-voice-room";
+import { playSound as playSoundboardEffect } from "@/lib/soundboard";
 import { DmView } from "@/components/dm-view";
 import { SettingsModal } from "@/components/settings/settings-modal";
 import {
@@ -254,6 +257,9 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
   const [muted, setMuted] = useState(false);
   const [deafened, setDeafened] = useState(false);
+  // The voice channel whose room view is open (null = not in a voice room).
+  const [voiceRoomId, setVoiceRoomId] = useState<string | null>(null);
+  const [boardSignal, setBoardSignal] = useState(0);
   const [settingsSection, setSettingsSection] = useState<SettingsSectionId | undefined>(undefined);
   const [shortcutSheetOpen, setShortcutSheetOpen] = useState(false);
   // Conversations the viewer muted; toggled from the DM composer's bell.
@@ -362,9 +368,26 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
           return next;
         });
       },
-      "start-call": () => flash("Start a call from a DM header."),
+      "start-call": () => {
+        const voice = channels.find((c) => c.kind === "voice");
+        if (voice && server) {
+          void joinVoice(voice.id);
+          return;
+        }
+        flash("Open a server with a voice channel to start a call.");
+      },
+      "toggle-soundboard": () => {
+        if (!voiceRoomId) {
+          flash("Join a voice channel to use the soundboard.");
+          return;
+        }
+        setBoardSignal((n) => n + 1);
+      },
       "get-help": () => openSettingsSection("keybinds"),
-      lofi: () => flash("🎧 Lo-fi beats are coming soon."),
+      lofi: () => {
+        // The ambient bed in the soundboard catalogue is our lo-fi loop.
+        playSoundboardEffect("npc", { volume: voiceSettings.soundboardVolume });
+      },
       "nav-servers": () => {
         const { serverIds, activeServerId: current } = keybindState.current;
         if (serverIds.length === 0) return;
@@ -753,6 +776,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
   /* -------------------------------- voice --------------------------------- */
   const joinVoice = useCallback(
     async (channelId: string) => {
+      const target = channels.find((c) => c.id === channelId);
       await supabase.from("voice_states").delete().eq("user_id", profile.id);
       const { error } = await supabase
         .from("voice_states")
@@ -761,15 +785,41 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
         flash("Couldn't join that voice channel.");
         return;
       }
-      flash(`Joined ${channels.find((c) => c.id === channelId)?.name ?? "voice"}`);
+      // Opening the room view is what starts microphone capture and signalling.
+      setVoiceRoomId(channelId);
+      flash(`Joined ${target?.name ?? "voice"}`);
     },
     [supabase, profile.id, channels, flash],
   );
 
   const leaveVoice = useCallback(async () => {
+    setVoiceRoomId(null);
     await supabase.from("voice_states").delete().eq("user_id", profile.id);
     flash("Left voice");
   }, [supabase, profile.id, flash]);
+
+  const voiceRoom = useVoiceRoom({
+    supabase,
+    channelId: voiceRoomId,
+    selfId: profile.id,
+  });
+
+  // Keep the published mute flag truthful and the mic track in sync.
+  useEffect(() => {
+    voiceRoom.setMuted(muted || deafened);
+  }, [muted, deafened, voiceRoom.setMuted]);
+
+  useEffect(() => {
+    if (!voiceRoomId) return;
+    const timer = setTimeout(() => {
+      void supabase
+        .from("voice_states")
+        .update({ muted })
+        .eq("channel_id", voiceRoomId)
+        .eq("user_id", profile.id);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [muted, voiceRoomId, supabase, profile.id]);
 
   /* ------------------------------- actions -------------------------------- */
   /** Look up the server we just created (newest owned row with this name). */
@@ -1665,7 +1715,7 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
                 previewSound(next ? "deafen" : "undeafen");
               }}
               onPreviewSound={previewSound}
-              onSelectVoice={() => setDialog("invite")}
+              onSelectVoice={(id) => void joinVoice(id)}
               onOpenSettings={() => setSettingsOpen(true)}
               onJoinVoice={(id) => void joinVoice(id)}
               onLeaveVoice={() => void leaveVoice()}
@@ -1717,7 +1767,61 @@ function CommsShell({ initial, onMembersChanged }: { initial: CommsInitial; onMe
             />
           )}
 
-          {activeChannel && server && onboardingServerId !== server.id && (
+          {/*
+            A joined voice channel takes over the whole content column: this is
+            where the call grid, screen share, soundboard and control bar live.
+            The text feed stays mounted for the channel route so switching back
+            keeps scroll position.
+          */}
+          {voiceRoomId && server && (
+            <VoiceRoomPanel
+              channelName={
+                channels.find((c) => c.id === voiceRoomId)?.name ?? "Voice channel"
+              }
+              occupants={voiceStates.filter((v) => v.channel_id === voiceRoomId)}
+              viewerId={profile.id}
+              muted={muted}
+              deafened={deafened}
+              onToggleMute={() => {
+                const next = !muted;
+                setMuted(next);
+                if (!next) setDeafened(false);
+                previewSound(next ? "mute" : "unmute");
+              }}
+              onToggleDeafen={() => {
+                const next = !deafened;
+                setDeafened(next);
+                if (next) setMuted(true);
+                previewSound(next ? "deafen" : "undeafen");
+              }}
+              onLeave={() => void leaveVoice()}
+              onOpenSettings={() => {
+                setSettingsSection("voice");
+                setSettingsOpen(true);
+              }}
+              onFlash={flash}
+              soundboardVolume={voiceSettings.soundboardVolume}
+              isPro={Boolean(profile.bt_pro)}
+              localScreen={voiceRoom.screenStream}
+              screenOwnerId={voiceRoom.screenOwnerId}
+              screenHint={voiceRoom.screenHint}
+              onStartScreen={async () => {
+                const result = await voiceRoom.startScreen();
+                if (!result.ok) flash(result.message);
+              }}
+              onStopScreen={voiceRoom.stopScreen}
+              remoteVideo={voiceRoom.remoteVideo}
+              cameraOn={Boolean(voiceRoom.cameraStream)}
+              onToggleCamera={async () => {
+                const result = await voiceRoom.toggleCamera();
+                if (!result.ok) flash(result.message);
+              }}
+              onOpenMembers={() => setShowMembers((v) => !v)}
+              openBoardSignal={boardSignal}
+            />
+          )}
+
+          {activeChannel && server && !voiceRoomId && onboardingServerId !== server.id && (
             <MessageFeed
               key={`${activeServerId}:${activeChannelId}`}
               supabase={supabase}
